@@ -2,7 +2,27 @@
 import json
 import time
 from . import constants
+from .channel import is_4k_name, base_channel_name
 from .utils import normalize_channel_name
+
+
+def alt_ids_for(channel, alias_map):
+    """
+    频道 EPG 备用 ID 列表。
+    4K/超高清频道优先套用基础(高清)频道 ID——运营商将 4K 卫视频道的
+    节目单挂在对应高清频道 ID 下；再附加同名 4K 变体 ID。
+    普通频道直接取同名变体 ID。均排除主 ID，保持首次出现顺序。
+    """
+    name = channel.get("channelName", "")
+    n = normalize_channel_name(name)
+    alts = []
+    if is_4k_name(name):
+        base = base_channel_name(name)
+        if base and base != n:
+            alts.extend(alias_map.get(base, []))
+    alts.extend(alias_map.get(n, []))
+    primary = str(channel.get("channelID"))
+    return [a for a in dict.fromkeys(alts) if a != primary]
 
 
 class EPGCollector:
@@ -95,8 +115,7 @@ class EPGCollector:
         for i, ch in enumerate(channels[:total]):
             cid = ch["channelID"]
             self.logger.info(f"  [{i+1}/{total}] {ch['channelName']}")
-            alt_ids = [a for a in alias_map.get(normalize_channel_name(ch["channelName"]), [])
-                       if a != str(cid)]
+            alt_ids = alt_ids_for(ch, alias_map)
             epg = self.fetch(cid, alt_ids)
             n_days = len(epg["programs"])
             n_progs = sum(len(d) for d in epg["programs"])

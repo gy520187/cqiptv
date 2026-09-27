@@ -12,7 +12,7 @@ from iptv.auth import Authenticator
 from iptv.channel import ChannelCollector, build_alias_map
 from iptv.channel_info import ChannelInfoParser
 from iptv.filter import filter_channels
-from iptv.epg import EPGCollector
+from iptv.epg import EPGCollector, alt_ids_for
 from iptv.utils import normalize_channel_name
 
 keyword = sys.argv[1] if len(sys.argv) > 1 else "云南卫视"
@@ -65,8 +65,8 @@ html = http.post(
 channel_infos = ChannelInfoParser(log).parse(html) if html else {}
 # 备用 ID 映射: channelList 全量变体 + getchannellist（含 4K 变体）取并集
 alias_map = build_alias_map(variants_all, channel_infos)
-alt_ids = [a for a in alias_map.get(normalize_channel_name(target["channelName"]), [])
-           if a != str(target["channelID"])]
+# 4K 频道优先套用基础(高清)频道 ID, 再附同名变体
+alt_ids = alt_ids_for(target, alias_map)
 if alt_ids:
     log.info(f"备用 ID: {', '.join(alt_ids)}")
 

@@ -1,5 +1,6 @@
 # iptv/channel.py
 import json
+import re
 from . import constants
 from .utils import clean_channel_name, normalize_channel_name
 
@@ -79,6 +80,16 @@ class ChannelCollector:
 def is_4k_name(name: str) -> bool:
     n = name.lower()
     return "4k" in n or "超高清" in n
+
+
+def base_channel_name(name: str) -> str:
+    """
+    4K/超高清频道的基础频道名（剥离末尾 4K/超高清）。
+    运营商把 4K 卫视频道的节目单挂在对应高清频道 ID 下
+    （如 北京卫视4K 的 EPG 在 北京卫视(高清)=1490 上），据此跨变体回退。
+    """
+    n = normalize_channel_name(name)
+    return re.sub(r"(?:4[kK]|超高清)+$", "", n).strip()
 
 
 def build_alias_map(pre_channels, channel_infos):
