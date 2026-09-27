@@ -17,8 +17,11 @@ def normalize_channel_name(name: str) -> str:
     n = clean_channel_name(name)
     n = re.sub(r"[（(]高清[)）]", "", n)
     n = re.sub(r"HD$", "", n, flags=re.IGNORECASE)
+    n = re.sub(r"[（(]超高清[)）]", "", n)
+    n = re.sub(r"超高清$", "", n)
     n = re.sub(r"[.。·]+$", "", n)
-    return n.strip()
+    n = n.strip()
+    return n if n else clean_channel_name(name)
 
 
 GROUP_TITLE_MAP = {
