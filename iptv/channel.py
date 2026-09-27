@@ -98,6 +98,9 @@ def merge_missing_4k(channels, channel_infos, logger):
         name = clean_channel_name(raw_name)
         if not name or not is_4k_name(name):
             continue
+        # 排除名单在 filter_channels 阶段已生效，注入阶段同样拦截（如 江苏晚会4K）
+        if raw_name in constants.EXCLUDE_CHANNELS or name in constants.EXCLUDE_CHANNELS:
+            continue
         if str(cid) in existing_ids:
             continue
         if normalize_channel_name(name) in existing_names:
