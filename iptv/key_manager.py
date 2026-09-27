@@ -7,7 +7,7 @@ class KeyManager:
     def __init__(self, cfg, logger):
         self.cfg, self.logger = cfg, logger
 
-    def get_or_crack(self):
+    def get_or_crack(self, allow_crack=True):
         key = self.cfg.key
         if key:
             self.logger.info(f"使用配置中的 key: {key}")
@@ -18,6 +18,13 @@ class KeyManager:
         auth = self.cfg.authenticator
         if not auth:
             self.logger.error("未配置 Authenticator")
+            return None
+
+        if not allow_crack:
+            self.logger.error(
+                "key 缺失或失效。暴力破解可能耗时数小时，"
+                "如需自动破解请加 --crack 参数，或使用 Web 破解页 (/crack)"
+            )
             return None
 
         self.logger.info(f"开始破解 {constants.CRACK_START}~{constants.CRACK_END}")

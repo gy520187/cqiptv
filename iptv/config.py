@@ -7,8 +7,8 @@ from ruamel.yaml import YAML
 class Config:
     FIELDS = [
     "AuthenticationIP", "UserID", "mac", "STBID",
-    "STBType", "STBVersion", "Authenticator", "key",
-    "ip", "SessionID", 
+    "STBType", "STBVersion", "SoftwareVersion", "Authenticator", "key",
+    "ip", "SessionID",
 ]
 
     def __init__(self, path="config.yaml"):
@@ -37,9 +37,14 @@ class Config:
             self.yaml.dump(default, f)
 
     def save(self):
+        import glob
         import time
         if os.path.exists(self.path):
             shutil.copy(self.path, f"{self.path}.bak.{int(time.time())}")
+            # 备份轮转：只保留最近 5 份
+            backups = sorted(glob.glob(f"{self.path}.bak.*"))
+            for old in backups[:-5]:
+                os.remove(old)
         with open(self.path, "w", encoding="utf-8") as f:
             self.yaml.dump(self.raw, f)
 
@@ -75,6 +80,10 @@ class Config:
     @property
     def stb_version(self):
         return self.get("STBVersion")
+
+    @property
+    def software_version(self):
+        return self.get("SoftwareVersion")
 
     @property
     def authenticator(self):

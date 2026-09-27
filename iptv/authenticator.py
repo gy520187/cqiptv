@@ -39,11 +39,9 @@ class AuthenticatorCrypto:
     def _unpad(data: bytes) -> str:
         if not data:
             return ""
-        data = data.replace(b"\x08", b"")
-        if data:
-            last = data[-1]
-            if 0 < last <= 8 and data.endswith(bytes([last]) * last):
-                data = data[:-last]
+        pad = data[-1]
+        if 0 < pad <= 8 and data.endswith(bytes([pad]) * pad):
+            data = data[:-pad]
         return data.decode("utf-8", errors="ignore")
 
     def decrypt(self, hex_text: str) -> str:

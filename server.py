@@ -1,6 +1,7 @@
 # server.py
 import os
-from flask import Flask, render_template, request, jsonify, Response, send_file, redirect
+import secrets
+from flask import Flask, render_template, request, jsonify, Response, send_file, send_from_directory, redirect
 from iptv.config import load_config
 from iptv.logger import setup_logger
 from iptv import constants
@@ -12,6 +13,24 @@ logger = setup_logger(cfg)
 app = Flask(__name__, template_folder="web/templates", static_folder="web/static")
 app.config["JSON_AS_ASCII"] = False
 api = WebAPI(cfg, logger)
+
+# 外网访问鉴权: 环境变量 WEB_AUTH=user:password, 留空则不启用
+WEB_AUTH = os.getenv("WEB_AUTH", "")
+# 播放器直接订阅的数据源, 免鉴权
+PUBLIC_PREFIXES = ("/playlist.m3u", "/epg.xml", "/data/icon")
+
+
+@app.before_request
+def check_auth():
+    if not WEB_AUTH or ":" not in WEB_AUTH:
+        return
+    if any(request.path.startswith(p) for p in PUBLIC_PREFIXES):
+        return
+    user, _, pwd = WEB_AUTH.partition(":")
+    auth = request.authorization
+    if auth and auth.username == user and secrets.compare_digest(auth.password or "", pwd):
+        return
+    return Response("Unauthorized", 401, {"WWW-Authenticate": 'Basic realm="iptv"'})
 
 
 @app.before_request
@@ -141,10 +160,8 @@ def api_logs():
 
 @app.route("/api/download/<path:fn>")
 def api_download(fn):
-    path = os.path.join(constants.OUTPUT_DIR, fn)
-    if not os.path.exists(path):
-        return jsonify({"ok": False, "msg": "文件不存在"}), 404
-    return send_file(path, as_attachment=True)
+    # send_from_directory 内部用 safe_join 校验路径，阻断 ../ 穿越
+    return send_from_directory(constants.OUTPUT_DIR, fn, as_attachment=True)
 
 
 @app.route("/playlist.m3u")
@@ -164,10 +181,7 @@ def epg_gz():
 
 @app.route("/data/icon/<path:fn>")
 def icon(fn):
-    path = os.path.join(constants.ICON_DIR, fn)
-    if not os.path.exists(path):
-        return "", 404
-    return send_file(path)
+    return send_from_directory(constants.ICON_DIR, fn)
 
 
 if __name__ == "__main__":

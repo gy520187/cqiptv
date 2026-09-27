@@ -3,7 +3,7 @@ import os
 import re
 import urllib.parse
 from . import constants
-from .utils import normalize_channel_name, map_group_title
+from .utils import normalize_channel_name, categorize_channel
 
 
 class NormalizedM3UGenerator:
@@ -50,7 +50,7 @@ class NormalizedM3UGenerator:
                 continue
 
             norm = normalize_channel_name(name)
-            group = map_group_title(ch.get("category", "")) or "未分类"
+            group = categorize_channel(name)
             logo = self.build_logo(name)
 
             info = channel_infos.get(cid) or {}

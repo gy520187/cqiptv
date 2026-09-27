@@ -38,6 +38,10 @@ COPY --from=builder /root/.local /home/iptv/.local
 # 复制项目
 COPY --chown=iptv:iptv . .
 
+# 启动前检查脚本
+COPY --chown=iptv:iptv docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
 # 创建目录
 RUN mkdir -p /app/data/icon /app/output /app/log \
     && chown -R iptv:iptv /app
@@ -50,11 +54,12 @@ ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
 # 端口
-EXPOSE 6000
+EXPOSE 6060
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:6000/', timeout=3)"
+    CMD python -c "import requests; requests.get('http://localhost:6060/', timeout=3)"
 
-# 默认启动 Web
+# 默认启动 Web（ENTRYPOINT 做挂载与权限预检）
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["python", "server.py"]

@@ -1,9 +1,0 @@
-# Docker Compose 环境变量（可选）
-TZ=Asia/Shanghai
-
-# Web 端口
-WEB_PORT=6000
-
-# 图标服务器地址（会被 M3U 引用）
-# 注意：这是第三方播放器能访问到的地址
-ICON_HOST=http://192.168.1.100:6000

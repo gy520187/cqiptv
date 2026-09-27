@@ -6,7 +6,7 @@ IPTV 认证模块
   ① 认证入口（GET，302）→ 提取 host
   ② 登录（POST authLoginHWCTC.jsp）→ 提取动态 EncryptToken + userToken
   ③ 生成 Authenticator（明文：{key}${EncryptToken}${UserID}${STBID}${ip}${mac}$$CTC）
-  ④ 鉴权（POST ValidAuthenticationHWCTC.jsp，22 字段大量留空）
+  ④ 鉴权（POST ValidAuthenticationHWCTC.jsp，23 字段按原始抓包对齐）
   ⑤ 检查 isSucessed，提取 UserToken + stbid
 
 ★ 关键：
@@ -33,10 +33,10 @@ class Authenticator:
         self.host = ""           # 认证后得到的真实 host
 
     # ========== 主流程 ==========
-    def login(self) -> Optional[Tuple[str, dict, str, str]]:
+    def login(self) -> Optional[Tuple[str, dict, str, str, str]]:
         """
         完整认证流程
-        :return: (host, cookies, user_token, stbid) 或 None
+        :return: (host, cookies, user_token, stbid, temp_key) 或 None
         """
         user_id = self.cfg.user_id
         mac = self.cfg.mac
@@ -44,6 +44,7 @@ class Authenticator:
         stb_type = self.cfg.stb_type
         stb_version = self.cfg.stb_version
         ip = self.cfg.get("ip") or "173.45.20.200"
+        software_version = self.cfg.software_version
         key = self.cfg.key
         user_agent = self.cfg.get("UserAgent") or (
             "Mozilla/5.0 (X11; U; Linux i686; en-US) AppleWebKit/534.0 (KHTML, like Gecko)"
@@ -69,13 +70,16 @@ class Authenticator:
         for attempt in range(3):
             try:
                 # ========== 步骤1: 认证入口 ==========
+                # 与原始抓包一致：FCCSupport=1，Referer 指向 epg.itv.cq.cn 入口页
                 self.logger.info(f"步骤1: 认证入口 (尝试 {attempt+1}/3)")
-                url = f"{auth_base}/EDS/jsp/AuthenticationURL?UserID={user_id}&Action=Login"
+                url = f"{auth_base}/EDS/jsp/AuthenticationURL?UserID={user_id}&Action=Login&FCCSupport=1"
                 self.logger.info(f"  认证 URL: {url}")
 
                 headers = {
                     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    "Accept-Language": "zh-CN,en-US;q=0.8",
                     "User-Agent": user_agent,
+                    "Referer": f"{constants.AUTH_PUBLIC}?UserID={user_id}&Action=Login&FCCSupport=1",
                     "X-Requested-With": "com.android.smart.terminal.iptv",
                 }
                 # ★ 用 self.http.session，cookies 自动管理
@@ -95,7 +99,9 @@ class Authenticator:
                 auth_headers = {
                     "User-Agent": user_agent,
                     "Content-Type": "application/x-www-form-urlencoded",
-                    "Referer": f"http://{self.host}/EPG/jsp/AuthenticationURL?UserID={user_id}&Action=Login",
+                    "Accept-Language": "zh-CN,en-US;q=0.8",
+                    "Origin": f"http://{self.host}",
+                    "Referer": f"http://{self.host}/EPG/jsp/AuthenticationURL?UserID={user_id}&Action=Login&FCCSupport=1",
                     "X-Requested-With": "com.android.smart.terminal.iptv",
                 }
                 ar = self.http.session.post(       # ★ 用 self.http.session
@@ -132,35 +138,40 @@ class Authenticator:
                 authenticator = pc.encrypt(auth_str)
                 self.logger.info(f"  密文: {authenticator[:32]}...")
 
-                # ========== 步骤4: 鉴权（22 字段大量留空） ==========
+                # ========== 步骤4: 鉴权（23 字段，与原始抓包逐项对齐） ==========
                 self.logger.info("步骤4: 鉴权")
                 valid_url = f"http://{self.host}/EPG/jsp/ValidAuthenticationHWCTC.jsp"
                 valid_headers = {
                     "User-Agent": user_agent,
                     "Content-Type": "application/x-www-form-urlencoded",
+                    "Accept-Language": "zh-CN,en-US;q=0.8",
+                    "Origin": f"http://{self.host}",
                     "Referer": f"http://{self.host}/EPG/jsp/authLoginHWCTC.jsp",
                 }
                 valid_data = {
-                    "UserID": user_id,
-                    "Lang": "",
+                    # 机顶盒表单先编码 @→%40，浏览器再编码 %→%25，线上为双重编码，requests 侧需预置 %40
+                    "UserID": user_id.replace("@", "%40"),
+                    "Lang": "1",
                     "SupportHD": "1",
-                    "NetUserID": "",
+                    "NetUserID": user_id,
                     "Authenticator": authenticator,
                     "STBType": stb_type,
                     "STBVersion": stb_version,
-                    "conntype": "",
+                    "conntype": "4",
                     "STBID": stb_id,
-                    "templateName": "",
-                    "areaId": "",
+                    "templateName": constants.TEMPLATE_NAME,
+                    "areaId": constants.AREA_ID,
                     "userToken": user_token,
-                    "userGroupId": "",
-                    "productPackageId": "",
+                    "userGroupId": constants.USER_GROUP,
+                    "productPackageId": constants.PRODUCT_PACKAGE_ID,
                     "mac": mac,
-                    "UserField": "",
-                    "SoftwareVersion": "",
-                    "IsSmartStb": "undefined",
-                    "desktopId": "undefined",
+                    "UserField": constants.USER_FIELD,
+                    "SoftwareVersion": software_version,
+                    "IsSmartStb": constants.IS_SMART_STB,
+                    "desktopId": "",
                     "stbmaker": "",
+                    "XMPPCapability": constants.XMPP_CAPABILITY,
+                    "ChipID": "",
                     "VIP": "",
                 }
                 vr = self.http.session.post(       # ★ 用 self.http.session
@@ -197,6 +208,16 @@ class Authenticator:
                 m = re.search(r'name="stbid"\s*value="([^"]+)"', vr.text)
                 resp_stbid = m.group(1) if m else None
 
+                # 提取 tempKey（getchannellistHWCTC 等后续请求需要）
+                # 原始抓包中 tempKey 由机顶盒中间件 CTCGetConfig('identityEncode') 填入，
+                # HTML 模板中恒为空值，纯软件环境无法复现计算，按空值提交（服务端不强校验）
+                m = re.search(r'tempKey\s*[=:]\s*["\']?([0-9A-Fa-f]{16,64})', vr.text)
+                temp_key = m.group(1) if m else ""
+                if not temp_key:
+                    m = re.search(r'tempKey\s*[=:]\s*["\']?([0-9A-Fa-f]{16,64})', ar.text)
+                    temp_key = m.group(1) if m else ""
+                self.logger.info(f"  tempKey: {temp_key or '（响应中未找到，按空值提交）'}")
+
                 if not resp_user_token or not resp_stbid:
                     self.logger.error("无法从 HTML 中提取 UserToken 或 stbid")
                     self.logger.debug(f"  响应前 500 字: {vr.text[:500]}")
@@ -213,7 +234,7 @@ class Authenticator:
                         self.http.session.cookies.set("JSESSIONID", m_cookie.group(1))
                         self.logger.info(f"  从响应头提取: {m_cookie.group(1)}")
 
-                return self.host, cookies, resp_user_token, resp_stbid
+                return self.host, cookies, resp_user_token, resp_stbid, temp_key
 
             except requests.exceptions.RequestException as e:
                 self.logger.error(f"请求失败: {e}")

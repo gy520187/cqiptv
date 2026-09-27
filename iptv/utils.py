@@ -34,6 +34,34 @@ def map_group_title(cat: str) -> str:
     return GROUP_TITLE_MAP.get(cat, cat)
 
 
+# ========== 频道分类规则 ==========
+# 数据源的 category 字段全为"全部", 无分类价值, 故按频道名关键词推导分组
+# 顺序匹配, 第一命中生效; 新频道落到"其他"时在此补关键词即可
+CATEGORY_RULES = [
+    ("重庆本地", ("CQTV", "重庆")),
+    ("央视频道", ("CCTV", "CGTN", "央视")),
+    ("卫视频道", ("卫视",)),
+    ("少儿卡通", ("卡酷", "金鹰", "嘉佳", "动漫", "早期教育")),
+    ("剧场电影", ("CHC", "剧场", "精彩影视", "金色频道")),
+    ("付费专题", ("风云", "世界地理", "兵器科技", "文物宝库", "求索", "书画",
+                "高尔夫", "游戏", "快乐垂钓", "女性时尚", "生活时尚", "法治天地",
+                "卫生健康", "梨园", "武术世界", "电视指南", "东方财经", "乐游",
+                "多彩文体")),
+    ("教育", ("CETV", "教育")),
+]
+DEFAULT_CATEGORY = "其他"
+
+
+def categorize_channel(name: str) -> str:
+    """按频道名推导分组 (顺序匹配, 第一命中生效)"""
+    if not name:
+        return DEFAULT_CATEGORY
+    for group, keywords in CATEGORY_RULES:
+        if any(kw in name for kw in keywords):
+            return group
+    return DEFAULT_CATEGORY
+
+
 def fmt14_to_iso(fmt14: str) -> str:
     s = str(fmt14)
     if len(s) != 14:

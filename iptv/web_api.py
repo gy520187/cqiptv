@@ -8,7 +8,7 @@ from . import constants
 class WebAPI:
     ALLOWED_FIELDS = {
         "AuthenticationIP", "UserID", "mac", "STBID",
-        "STBType", "STBVersion", "Authenticator", "key",
+        "STBType", "STBVersion", "SoftwareVersion", "Authenticator", "key",
     }
 
     def __init__(self, cfg, logger):

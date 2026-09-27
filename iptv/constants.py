@@ -1,7 +1,10 @@
 # iptv/constants.py
 """
 写死的配置（不需要在 config.yaml 中修改）
+
+部署相关的两项（ICON_HOST / WEB_PORT）可用环境变量覆盖，见 .env.example
 """
+import os
 
 # ========== 服务器地址 ==========
 DEFAULT_EPG_BASE = "http://172.23.88.159:33200/EPG/jsp"
@@ -22,10 +25,14 @@ TIMEOUT = 10
 RETRY = 3
 MAX_CHANNELS = 0
 
-# ========== 模板/用户组 ==========
+# ========== 模板/用户组（与原始抓包对齐） ==========
 TEMPLATE_NAME = "meilixinnongcunhangyebanitvfenzu"
 USER_GROUP = "1037"
-AREA_ID = "10006"
+AREA_ID = "CD0"
+PRODUCT_PACKAGE_ID = "-1"
+USER_FIELD = "2"
+XMPP_CAPABILITY = "1"
+IS_SMART_STB = "0"
 IS_COUNTRY_CHANNEL = 1
 
 # ========== 过滤规则 ==========
@@ -34,7 +41,7 @@ EXCLUDE_CHANNELS = {"江苏晚会4K", "江苏晚会4k"}
 # ========== 图标 ==========
 FANMINGMING_BASE = "https://live.fanmingming.cn/tv/{name}.png"
 ICON_DIR = "data/icon"
-ICON_HOST = "http://iptv.20221122.xyz:6000"   # 改成你的服务器地址
+ICON_HOST = os.getenv("ICON_HOST", "http://your-server:6060")   # M3U 引用的图标地址，改成播放器可达的服务器地址
 ICON_FORCE = False
 
 # ========== 输出 ==========
@@ -52,7 +59,7 @@ CRACK_WRITE_BACK = True
 
 # ========== Web ==========
 WEB_HOST = "0.0.0.0"
-WEB_PORT = 6000
+WEB_PORT = int(os.getenv("WEB_PORT") or "6060")
 
 # ========== 定时任务 ==========
 SCHEDULER_ENABLED = True

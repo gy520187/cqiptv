@@ -5,15 +5,22 @@ services:
     container_name: iptv-web
     restart: unless-stopped
     ports:
-      - "6000:6000"
+      # 宿主机与容器端口一致（默认 6060，避开浏览器禁用的 6000），可通过 .env 的 WEB_PORT 修改宿主机侧
+      - "${WEB_PORT:-6060}:6060"
     volumes:
       # 持久化数据
+      # 注意: config.yaml 必须在宿主机上预先存在（cp config.example.yaml config.yaml），
+      # 否则 Docker 会把挂载点创建成目录导致容器启动失败
       - ./config.yaml:/app/config.yaml
       - ./data:/app/data
       - ./output:/app/output
       - ./log:/app/log
     environment:
       - TZ=Asia/Shanghai
+      # M3U 中引用的图标地址，需为播放器可达的地址（在 .env 中配置）
+      - ICON_HOST=${ICON_HOST:-http://your-server:6060}
+      # 外网访问鉴权（可选），格式 user:password，留空不启用
+      - WEB_AUTH=${WEB_AUTH:-}
     # 资源限制（可选）
     deploy:
       resources:
@@ -29,12 +36,18 @@ services:
     container_name: iptv-scheduler
     restart: unless-stopped
     volumes:
+      # 同上: config.yaml 必须在宿主机上预先存在
       - ./config.yaml:/app/config.yaml
       - ./data:/app/data
       - ./output:/app/output
       - ./log:/app/log
     environment:
       - TZ=Asia/Shanghai
+      # scheduler 采集时同样会生成 M3U，需要一致的图标地址
+      - ICON_HOST=${ICON_HOST:-http://your-server:6060}
+    # scheduler 无 Web 服务，禁用镜像自带的 6060 端口健康检查
+    healthcheck:
+      disable: true
     command: ["python", "scheduler.py"]
     depends_on:
       - iptv-web

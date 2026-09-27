@@ -11,7 +11,7 @@ class HttpClient:
         # ★ 全局唯一的 session（cookies 自动管理，认证后共享给后续请求）
         self.session = requests.Session()
         self.session.headers.update({
-            "User-Agent": "Mozilla/5.0 (X11; U; Linux i686) AppleWebKit/534.0",
+            "User-Agent": "Mozilla/5.0 (X11; U; Linux i686; en-US) AppleWebKit/534.0 (KHTML, like Gecko)",
             "Accept": "*/*",
             "Accept-Language": "zh-CN,en-US;q=0.8",
             "Accept-Encoding": "deflate, gzip",
@@ -37,13 +37,21 @@ class HttpClient:
                 time.sleep(1)
         return None
 
-    def post(self, path, data, referer=""):
-        url = self.url(path)
-        headers = {"Referer": referer} if referer else {}
-        try:
-            r = self.session.post(url, data=data, headers=headers,
-                                  timeout=constants.TIMEOUT)
-            return r.text if r.status_code == 200 else None
-        except Exception as e:
-            self.logger.error(f"POST失败: {e}")
-            return None
+    def post(self, path, data, referer="", full_url=False, origin=""):
+        url = path if full_url else self.url(path)
+        headers = {}
+        if referer:
+            headers["Referer"] = referer
+        if origin:
+            headers["Origin"] = origin
+        for attempt in range(constants.RETRY):
+            try:
+                r = self.session.post(url, data=data, headers=headers,
+                                      timeout=constants.TIMEOUT)
+                if r.status_code == 200:
+                    return r.text
+                self.logger.warning(f"HTTP {r.status_code}: {url}")
+            except Exception as e:
+                self.logger.warning(f"POST请求失败({attempt+1}/{constants.RETRY}): {e}")
+                time.sleep(1)
+        return None

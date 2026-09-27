@@ -1,4 +1,5 @@
 # main.py
+import argparse
 import sys
 import traceback
 from iptv.config import load_config
@@ -18,7 +19,7 @@ from iptv.icon import IconHandler
 from iptv.storage import Storage
 
 
-def collect():
+def collect(allow_crack=True):
     logger = None
     try:
         cfg = load_config("config.yaml")
@@ -32,7 +33,7 @@ def collect():
 
         # ========== 密钥 ==========
         km = KeyManager(cfg, logger)
-        key = km.get_or_crack()
+        key = km.get_or_crack(allow_crack=allow_crack)
         if key:
             for k, v in km.decrypt_info(key).items():
                 logger.info(f"  {k}: {v}")
@@ -46,7 +47,7 @@ def collect():
         if not result:
             logger.error("认证失败，退出")
             sys.exit(1)
-        host, cookies, user_token, stbid = result
+        host, cookies, user_token, stbid, temp_key = result
         logger.info(f"认证成功: host={host}")
 
         # ========== 频道列表 ==========
@@ -68,9 +69,24 @@ def collect():
             ch["mediacode"] = mediacodes.get(str(ch["channelIndex"]), "")
 
         # ========== 组播地址 ==========
+        # 照抄机顶盒原始抓包: POST getchannellistHWCTC.jsp, 携带认证凭据
         channel_infos = {}
-        referer = http.url("/diyiyingshi/en/channel/channelCore.jsp")
-        html = http.get(constants.PATH_CHANNEL_INFO, referer=referer)
+        info_body = {
+            "conntype": "4",
+            "UserToken": user_token,
+            "tempKey": temp_key,
+            "stbid": stbid,
+            "SupportHD": "1",
+            "UserID": cfg.user_id,
+            "Lang": "1",
+        }
+        html = http.post(
+            f"http://{host}/EPG/jsp/getchannellistHWCTC.jsp",
+            data=info_body,
+            referer=f"http://{host}/EPG/jsp/ValidAuthenticationHWCTC.jsp",
+            origin=f"http://{host}",
+            full_url=True,
+        )
         if html:
             channel_infos = ChannelInfoParser(logger).parse(html)
         logger.info(f"组播地址: {len(channel_infos)} 个")
@@ -112,4 +128,9 @@ def collect():
 
 
 if __name__ == "__main__":
-    collect()
+    parser = argparse.ArgumentParser(description="IPTV 采集工具")
+    parser.add_argument(
+        "--crack", action="store_true",
+        help="key 缺失或失效时自动暴力破解（8 进程，可能耗时数小时）",
+    )
+    collect(allow_crack=parser.parse_args().crack)
