@@ -63,11 +63,15 @@ class EPGCollector:
         return data[0], programs
 
     def _fetch_days(self, channel_id):
-        """逐天拉取一个频道 ID 的全部节目（dateIndex 0..7），按 (起止,标题) 去重"""
+        """
+        逐天拉取一个频道 ID 的全部节目，按 (起止,标题) 去重。
+        dateIndex 范围 -EPG_HISTORY_DAYS..DATE_SIZE-1：负数取历史节目
+        （供播放器 catchup 回看定位），0 起为未来节目。
+        """
         dates = []
         days = []
         seen = set()
-        for day in range(constants.DATE_SIZE):
+        for day in range(-constants.EPG_HISTORY_DAYS, constants.DATE_SIZE):
             info, programs = self._fetch_day(channel_id, day)
             if info and not dates:
                 dates = info.get("data", []) or []
@@ -110,7 +114,9 @@ class EPGCollector:
         total = len(channels)
         if constants.MAX_CHANNELS > 0:
             total = min(total, constants.MAX_CHANNELS)
-        self.logger.info(f"采集节目单，{total} 频道 × {constants.DATE_SIZE} 天")
+        self.logger.info(
+            f"采集节目单，{total} 频道 × "
+            f"{constants.EPG_HISTORY_DAYS} 天历史 + {constants.DATE_SIZE} 天未来")
         result = {}
         for i, ch in enumerate(channels[:total]):
             cid = ch["channelID"]

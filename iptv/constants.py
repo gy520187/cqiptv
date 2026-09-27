@@ -19,6 +19,7 @@ PATH_AUTH_LOGIN = "/authLoginHWCTC.jsp"
 
 # ========== 采集参数 ==========
 DATE_SIZE = 8        # EPG 采集天数（dateIndex 0..7，运营商接口一次只回一天）
+EPG_HISTORY_DAYS = 7 # 历史节目单天数（dateIndex -7..-1），供播放器回看 catchup 定位过去节目
 EPG_DATE_SIZE = 2    # 请求参数 dateSize，与原始抓包的回看节目单请求一致
 EPG_PER_DAY = 999    # 单页拉全天节目（999 足够容纳一天的全部节目）
 INTERVAL = 0.1

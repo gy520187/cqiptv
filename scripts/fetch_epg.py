@@ -70,14 +70,14 @@ alt_ids = alt_ids_for(target, alias_map)
 if alt_ids:
     log.info(f"备用 ID: {', '.join(alt_ids)}")
 
-# 逐天拉取 8 天节目单（主 ID 全空自动回退备用 ID）
+# 逐天拉取节目单（含历史 7 天 + 未来 8 天，主 ID 全空自动回退备用 ID）
 epg = EPGCollector(cfg, http, log).fetch(target["channelID"], alt_ids)
 days = epg["programs"]
 total = sum(len(d) for d in days)
 log.info(f"拉取完成: {len(days)} 天 / {total} 条节目")
-for i, day in enumerate(days):
+for day in days:
     if day:
-        log.info(f"  dateIndex {i}: {len(day):4d} 条  "
+        log.info(f"  {day[0].get('beginTimeFormat', '')[:8]}: {len(day):4d} 条  "
                  f"{day[0].get('beginTimeFormat')} ~ {day[-1].get('endTimeFormat')}")
 
 # JSON 落盘到容器 output/（compose 已挂载到宿主机 ./output）
