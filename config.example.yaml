@@ -1,0 +1,11 @@
+# ========== IPTV 认证配置 ==========
+# 仅需填写以下内容，其余配置写死在脚本中（iptv/constants.py）
+
+AuthenticationIP: ""    # 认证服务器地址，如 http://172.23.88.159:33200/EPG/jsp
+UserID: ""              # 用户账号，如 i5207379189@itv
+mac: ""                 # MAC 地址，如 28:A6:DB:6F:D2:9E
+STBID: ""               # 机顶盒序列号，如 0010049900608930173628A6DB6FD29E
+STBType: ""             # 机顶盒型号，如 EC6108V9U_pub_cqydx
+STBVersion: ""          # 机顶盒版本，如 HWV215011P0000
+Authenticator: ""       # 抓包获取的 Authenticator（十六进制）
+key: ""                 # 3DES 密钥（破解成功后自动回写）

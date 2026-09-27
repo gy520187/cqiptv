@@ -1,0 +1,46 @@
+services:
+  iptv-web:
+    build: .
+    image: iptv:latest
+    container_name: iptv-web
+    restart: unless-stopped
+    ports:
+      - "6000:6000"
+    volumes:
+      # 持久化数据
+      - ./config.yaml:/app/config.yaml
+      - ./data:/app/data
+      - ./output:/app/output
+      - ./log:/app/log
+    environment:
+      - TZ=Asia/Shanghai
+    # 资源限制（可选）
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1G
+    networks:
+      - iptv-net
+
+  # 定时采集（可选，与 Web 共用一个镜像）
+  iptv-scheduler:
+    image: iptv:latest
+    container_name: iptv-scheduler
+    restart: unless-stopped
+    volumes:
+      - ./config.yaml:/app/config.yaml
+      - ./data:/app/data
+      - ./output:/app/output
+      - ./log:/app/log
+    environment:
+      - TZ=Asia/Shanghai
+    command: ["python", "scheduler.py"]
+    depends_on:
+      - iptv-web
+    networks:
+      - iptv-net
+
+networks:
+  iptv-net:
+    driver: bridge
