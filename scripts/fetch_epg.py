@@ -9,7 +9,7 @@ from iptv.config import load_config
 from iptv.logger import setup_logger
 from iptv.http_client import HttpClient
 from iptv.auth import Authenticator
-from iptv.channel import ChannelCollector
+from iptv.channel import ChannelCollector, build_alias_map
 from iptv.channel_info import ChannelInfoParser
 from iptv.filter import filter_channels
 from iptv.epg import EPGCollector
@@ -30,7 +30,8 @@ log.info(f"认证成功: host={host}")
 
 # 频道列表 → 过滤 → 按关键字匹配（原始名/归一化名都比对）
 collector = ChannelCollector(cfg, http, log)
-channels = filter_channels(collector.flatten(collector.fetch()))
+variants_all = collector.flatten(collector.fetch())
+channels = filter_channels(variants_all)
 log.info(f"频道列表 {len(channels)} 个")
 
 hits = [c for c in channels
@@ -62,11 +63,8 @@ html = http.post(
     full_url=True,
 )
 channel_infos = ChannelInfoParser(log).parse(html) if html else {}
-alias_map = {}
-for cid_, info in channel_infos.items():
-    n = normalize_channel_name(info.get("channel_name", ""))
-    if n:
-        alias_map.setdefault(n, []).append(str(cid_))
+# 备用 ID 映射: channelList 全量变体 + getchannellist（含 4K 变体）取并集
+alias_map = build_alias_map(variants_all, channel_infos)
 alt_ids = [a for a in alias_map.get(normalize_channel_name(target["channelName"]), [])
            if a != str(target["channelID"])]
 if alt_ids:

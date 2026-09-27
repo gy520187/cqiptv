@@ -8,12 +8,11 @@ from iptv import constants
 from iptv.http_client import HttpClient
 from iptv.auth import Authenticator
 from iptv.key_manager import KeyManager
-from iptv.channel import ChannelCollector, merge_missing_4k
+from iptv.channel import ChannelCollector, merge_missing_4k, build_alias_map
 from iptv.channel_info import ChannelInfoParser
 from iptv.mediacode import MediacodeCollector
 from iptv.epg import EPGCollector
 from iptv.filter import filter_channels
-from iptv.utils import normalize_channel_name
 from iptv.xmltv import XMLTVGenerator
 from iptv.m3u_normalized import NormalizedM3UGenerator
 from iptv.icon import IconHandler
@@ -59,6 +58,8 @@ def collect(allow_crack=True):
             sys.exit(1)
         channels = ch_collector.flatten(raw)
         logger.info(f"扁平化 {len(channels)}")
+        # 全量变体列表（含稍后被去重的 SD/标清变体），供 EPG 备用 ID 映射使用
+        variants_all = channels
 
         # ========== 过滤 ==========
         channels = filter_channels(channels)
@@ -96,15 +97,9 @@ def collect(allow_crack=True):
         # 使其参与后续 EPG 采集/图标/输出，M3U 带完整组播与回看地址
         channels = merge_missing_4k(channels, channel_infos, logger)
 
-        # 同名变体备用 ID 映射（getchannellist 含高清/SD 变体）：
-        # 高清 ID 在 tVod 无节目时回退 SD ID（实测 云南卫视(高清) 空、SD 有数据）
-        alias_map = {}
-        for cid_, info in channel_infos.items():
-            n = normalize_channel_name(info.get("channel_name", ""))
-            if n:
-                alias_map.setdefault(n, []).append(str(cid_))
-
         # ========== 节目单 ==========
+        # 同名变体备用 ID 映射: 高清 ID 在 tVod 无节目时回退 SD/其他变体 ID
+        alias_map = build_alias_map(variants_all, channel_infos)
         epgs = EPGCollector(cfg, http, logger).fetch_all(channels, alias_map)
         logger.info(f"节目单: {len(epgs)} 个频道")
 

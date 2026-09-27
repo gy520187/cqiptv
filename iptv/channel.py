@@ -81,6 +81,33 @@ def is_4k_name(name: str) -> bool:
     return "4k" in n or "超高清" in n
 
 
+def build_alias_map(pre_channels, channel_infos):
+    """
+    构建归一化频道名 -> 备用 channelID 列表（同名高清/SD/4K 变体互为 EPG 备选）。
+    数据源取并集:
+    - channelList.jsp 全量扁平列表（含被 filter_channels 去重掉的 SD/标清变体）
+    - getchannellistHWCTC.jsp 解析结果（含 channelList 不下发的 4K 变体）
+    运营商 tVod 数据可能只挂在某个变体 ID 上（实测 云南卫视(高清) 全空、SD 有），
+    主 ID 无节目时按此映射回退。
+    """
+    alias_map = {}
+
+    def add(name, cid):
+        n = normalize_channel_name(name or "")
+        cid = str(cid) if cid else ""
+        if not n or not cid:
+            return
+        lst = alias_map.setdefault(n, [])
+        if cid not in lst:
+            lst.append(cid)
+
+    for ch in pre_channels or []:
+        add(ch.get("channelName"), ch.get("channelID"))
+    for cid, info in (channel_infos or {}).items():
+        add(info.get("channel_name"), cid)
+    return alias_map
+
+
 def merge_missing_4k(channels, channel_infos, logger):
     """
     运营商 channelList.jsp 不含 4K 频道，仅在 getchannellistHWCTC.jsp 响应下发
