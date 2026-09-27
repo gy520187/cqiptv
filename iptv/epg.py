@@ -2,6 +2,7 @@
 import json
 import time
 from . import constants
+from .utils import normalize_channel_name
 
 
 class EPGCollector:
@@ -41,12 +42,8 @@ class EPGCollector:
         ]
         return data[0], programs
 
-    def fetch(self, channel_id):
-        """
-        运营商接口一次只返回 dateIndex 对应一天的节目单（原始抓包证实：
-        dateSize=8 的响应也只有当天 36 条节目），逐天请求拼出多日 EPG。
-        返回结构保持 programs 为"页"嵌套（每天一页），storage/xmltv 无需改动。
-        """
+    def _fetch_days(self, channel_id):
+        """逐天拉取一个频道 ID 的全部节目（dateIndex 0..7），按 (起止,标题) 去重"""
         dates = []
         days = []
         seen = set()
@@ -64,12 +61,32 @@ class EPGCollector:
             if fresh:
                 days.append(fresh)
             time.sleep(constants.INTERVAL)
+        return dates, days
+
+    def fetch(self, channel_id, alt_ids=None):
+        """
+        运营商接口一次只返回 dateIndex 对应一天的节目单（原始抓包证实：
+        dateSize=8 的响应也只有当天 36 条节目），逐天请求拼出多日 EPG。
+        同名频道存在高清/SD 等变体时，tVod 数据可能只挂在某个 ID 上
+        （实测 云南卫视(高清)=642905769 无数据，SD 变体=1672 有）：
+        主 ID 8 天全空则依次回退备用 ID。返回仍按主 channelID 语义使用。
+        """
+        dates, days = self._fetch_days(channel_id)
+        if not days and alt_ids:
+            for alt in alt_ids:
+                self.logger.info(f"    channelId={channel_id} 无节目数据, 回退备用 ID {alt}")
+                alt_dates, alt_days = self._fetch_days(alt)
+                if alt_days:
+                    dates = alt_dates
+                    days = alt_days
+                    break
         return {
             "dates": dates,
             "programs": days,
         }
 
-    def fetch_all(self, channels):
+    def fetch_all(self, channels, alias_map=None):
+        alias_map = alias_map or {}
         total = len(channels)
         if constants.MAX_CHANNELS > 0:
             total = min(total, constants.MAX_CHANNELS)
@@ -78,7 +95,9 @@ class EPGCollector:
         for i, ch in enumerate(channels[:total]):
             cid = ch["channelID"]
             self.logger.info(f"  [{i+1}/{total}] {ch['channelName']}")
-            epg = self.fetch(cid)
+            alt_ids = [a for a in alias_map.get(normalize_channel_name(ch["channelName"]), [])
+                       if a != str(cid)]
+            epg = self.fetch(cid, alt_ids)
             n_days = len(epg["programs"])
             n_progs = sum(len(d) for d in epg["programs"])
             self.logger.info(f"    {n_days} 天 / {n_progs} 条节目")

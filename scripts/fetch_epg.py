@@ -10,6 +10,7 @@ from iptv.logger import setup_logger
 from iptv.http_client import HttpClient
 from iptv.auth import Authenticator
 from iptv.channel import ChannelCollector
+from iptv.channel_info import ChannelInfoParser
 from iptv.filter import filter_channels
 from iptv.epg import EPGCollector
 from iptv.utils import normalize_channel_name
@@ -43,8 +44,36 @@ log.info(f"命中 {len(hits)} 个, 取 channelIndex 最小者: "
          f"{target['channelName']} (channelID={target['channelID']}, "
          f"channelIndex={target['channelIndex']})")
 
-# 逐天拉取 8 天节目单
-epg = EPGCollector(cfg, http, log).fetch(target["channelID"])
+# getchannellist 建同名变体备用 ID 映射（高清 ID 无节目时回退，如 云南卫视）
+info_body = {
+    "conntype": "4",
+    "UserToken": user_token,
+    "tempKey": temp_key,
+    "stbid": stbid,
+    "SupportHD": "1",
+    "UserID": cfg.user_id,
+    "Lang": "1",
+}
+html = http.post(
+    f"http://{host}/EPG/jsp/getchannellistHWCTC.jsp",
+    data=info_body,
+    referer=f"http://{host}/EPG/jsp/ValidAuthenticationHWCTC.jsp",
+    origin=f"http://{host}",
+    full_url=True,
+)
+channel_infos = ChannelInfoParser(log).parse(html) if html else {}
+alias_map = {}
+for cid_, info in channel_infos.items():
+    n = normalize_channel_name(info.get("channel_name", ""))
+    if n:
+        alias_map.setdefault(n, []).append(str(cid_))
+alt_ids = [a for a in alias_map.get(normalize_channel_name(target["channelName"]), [])
+           if a != str(target["channelID"])]
+if alt_ids:
+    log.info(f"备用 ID: {', '.join(alt_ids)}")
+
+# 逐天拉取 8 天节目单（主 ID 全空自动回退备用 ID）
+epg = EPGCollector(cfg, http, log).fetch(target["channelID"], alt_ids)
 days = epg["programs"]
 total = sum(len(d) for d in days)
 log.info(f"拉取完成: {len(days)} 天 / {total} 条节目")

@@ -13,6 +13,7 @@ from iptv.channel_info import ChannelInfoParser
 from iptv.mediacode import MediacodeCollector
 from iptv.epg import EPGCollector
 from iptv.filter import filter_channels
+from iptv.utils import normalize_channel_name
 from iptv.xmltv import XMLTVGenerator
 from iptv.m3u_normalized import NormalizedM3UGenerator
 from iptv.icon import IconHandler
@@ -95,8 +96,16 @@ def collect(allow_crack=True):
         # 使其参与后续 EPG 采集/图标/输出，M3U 带完整组播与回看地址
         channels = merge_missing_4k(channels, channel_infos, logger)
 
+        # 同名变体备用 ID 映射（getchannellist 含高清/SD 变体）：
+        # 高清 ID 在 tVod 无节目时回退 SD ID（实测 云南卫视(高清) 空、SD 有数据）
+        alias_map = {}
+        for cid_, info in channel_infos.items():
+            n = normalize_channel_name(info.get("channel_name", ""))
+            if n:
+                alias_map.setdefault(n, []).append(str(cid_))
+
         # ========== 节目单 ==========
-        epgs = EPGCollector(cfg, http, logger).fetch_all(channels)
+        epgs = EPGCollector(cfg, http, logger).fetch_all(channels, alias_map)
         logger.info(f"节目单: {len(epgs)} 个频道")
 
         # ========== 图标 ==========
