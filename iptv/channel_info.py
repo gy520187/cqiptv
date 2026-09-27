@@ -16,6 +16,8 @@ class ChannelInfoParser:
                 continue
             result[cid] = {
                 "channel_name": self._extract(conf, "ChannelName"),
+                "user_channel_id": self._extract(conf, "UserChannelID"),
+                "timeshift": self._extract(conf, "TimeShift"),
                 "channel_url": self._extract(conf, "ChannelURL"),
                 "timeshift_url": self._extract(conf, "TimeShiftURL"),
                 "fcc_ip": self._extract(conf, "ChannelFCCIP"),

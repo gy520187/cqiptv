@@ -1,7 +1,7 @@
 # iptv/channel.py
 import json
 from . import constants
-from .utils import clean_channel_name
+from .utils import clean_channel_name, normalize_channel_name
 
 
 class ChannelCollector:
@@ -74,3 +74,54 @@ class ChannelCollector:
         result = sorted(seen.values(), key=lambda x: x["channelIndex"])
         self.logger.info(f"  扁平化后 {len(result)} 个唯一频道")
         return result
+
+
+def is_4k_name(name: str) -> bool:
+    n = name.lower()
+    return "4k" in n or "超高清" in n
+
+
+def merge_missing_4k(channels, channel_infos, logger):
+    """
+    运营商 channelList.jsp 不含 4K 频道，仅在 getchannellistHWCTC.jsp 响应下发
+    （原始抓包证实：channelList 344 条无 4K，getchannellist 含北京卫视4K/广东卫视4K 等）。
+    将频道列表缺失的 4K 频道从 getchannellist 解析结果注入。
+    清洗后同名的只保留 UserChannelID 较小者（如 北京卫视4K. 与 北京卫视4K）。
+    """
+    if not channel_infos:
+        return channels
+    existing_ids = {str(c.get("channelID")) for c in channels}
+    existing_names = {normalize_channel_name(c.get("channelName", "")) for c in channels}
+    candidates = []
+    for cid, info in channel_infos.items():
+        raw_name = info.get("channel_name", "")
+        name = clean_channel_name(raw_name)
+        if not name or not is_4k_name(name):
+            continue
+        if str(cid) in existing_ids:
+            continue
+        if normalize_channel_name(name) in existing_names:
+            continue
+        try:
+            idx = int(info.get("user_channel_id") or 9999)
+        except ValueError:
+            idx = 9999
+        candidates.append({
+            "channelIndex": idx,
+            "channelName": name,
+            "channelNameRaw": raw_name,
+            "channelID": str(cid),
+            "timeShift": info.get("timeshift"),
+            "isTVOD": 1,
+            "hasSubscrib": 1,
+            "category": "4K频道",
+        })
+    # 同名去重，保留 channelIndex 较小者
+    by_name = {}
+    for c in sorted(candidates, key=lambda x: x["channelIndex"]):
+        by_name.setdefault(normalize_channel_name(c["channelName"]), c)
+    added = sorted(by_name.values(), key=lambda x: x["channelIndex"])
+    if added:
+        logger.info(f"注入缺失 4K 频道 {len(added)} 个: "
+                    + ", ".join(c["channelName"] for c in added))
+    return channels + added
