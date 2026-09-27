@@ -43,6 +43,7 @@ EXCLUDE_CHANNELS = {"江苏晚会4K", "江苏晚会4k"}
 FANMINGMING_BASE = "https://live.fanmingming.cn/tv/{name}.png"
 ICON_DIR = "data/icon"
 ICON_HOST = os.getenv("ICON_HOST", "http://your-server:6060")   # M3U 引用的图标地址，改成播放器可达的服务器地址
+EPG_URL = os.getenv("EPG_URL") or f"{ICON_HOST}/epg.xml"        # M3U 头部 x-tvg-url 指向的节目单地址，留空默认 ICON_HOST/epg.xml
 ICON_FORCE = False
 
 # ========== 输出 ==========

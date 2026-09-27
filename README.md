@@ -80,6 +80,8 @@ cp .env.example .env
 
 M3U 中的图标地址来自 ICON_HOST，需改成第三方播放器实际能访问到的地址（如局域网 IP）。
 
+M3U 首行 `#EXTM3U` 带 `x-tvg-url` 属性指向节目单地址，默认 `ICON_HOST/epg.xml`；播放器走独立 EPG 入口时在 `.env` 中设置 `EPG_URL` 为完整地址。
+
 ## 外网 IPv6 访问
 
 1. `.env` 中设置 `WEB_AUTH=用户名:密码`——公网暴露必须启用，否则任何人都能通过 `/api/config` 读取机顶盒凭据

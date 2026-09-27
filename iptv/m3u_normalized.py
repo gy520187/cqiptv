@@ -30,7 +30,7 @@ class NormalizedM3UGenerator:
         return url
 
     def build(self, channels, channel_infos):
-        lines = ["#EXTM3U"]
+        lines = [f'#EXTM3U x-tvg-url="{constants.EPG_URL}"']
         if not channels:
             return "\n".join(lines)
         if not channel_infos:

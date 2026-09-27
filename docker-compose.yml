@@ -19,6 +19,8 @@ services:
       - TZ=Asia/Shanghai
       # M3U 中引用的图标地址，需为播放器可达的地址（在 .env 中配置）
       - ICON_HOST=${ICON_HOST:-http://your-server:6060}
+      # M3U 头部 x-tvg-url 的节目单地址（可选，留空默认 ICON_HOST/epg.xml）
+      - EPG_URL=${EPG_URL:-}
       # 外网访问鉴权（可选），格式 user:password，留空不启用
       - WEB_AUTH=${WEB_AUTH:-}
     # 资源限制（可选）
@@ -45,6 +47,7 @@ services:
       - TZ=Asia/Shanghai
       # scheduler 采集时同样会生成 M3U，需要一致的图标地址
       - ICON_HOST=${ICON_HOST:-http://your-server:6060}
+      - EPG_URL=${EPG_URL:-}
     # scheduler 无 Web 服务，禁用镜像自带的 6060 端口健康检查
     healthcheck:
       disable: true
