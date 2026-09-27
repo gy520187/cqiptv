@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}IPTV 管理{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<nav class="navbar">
+    <div class="brand">📺 IPTV 管理</div>
+    <ul class="menu">
+        <li><a href="/">总览</a></li>
+        <li><a href="/channels">频道</a></li>
+        <li><a href="/crack">密钥</a></li>
+        <li><a href="/config">配置</a></li>
+        <li><a href="/logs">日志</a></li>
+    </ul>
+    <div class="actions">
+        <button onclick="startCollect()">🔄 采集</button>
+    </div>
+</nav>
+<main class="container">
+    {% block content %}{% endblock %}
+</main>
+<div id="toast" class="toast"></div>
+<script src="/static/app.js"></script>
+{% block script %}{% endblock %}
+</body>
+</html>
