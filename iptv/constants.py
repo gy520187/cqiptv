@@ -37,7 +37,8 @@ IS_SMART_STB = "0"
 IS_COUNTRY_CHANNEL = 1
 
 # ========== 过滤规则 ==========
-EXCLUDE_CHANNELS = {"江苏晚会4K", "江苏晚会4k"}
+# 江苏晚会4K: 临时晚会频道; 重庆卫视频道: 重庆卫视的 SD 重复频道
+EXCLUDE_CHANNELS = {"江苏晚会4K", "江苏晚会4k", "重庆卫视频道"}
 
 # ========== 图标 ==========
 FANMINGMING_BASE = "https://live.fanmingming.cn/tv/{name}.png"

@@ -21,7 +21,45 @@ def normalize_channel_name(name: str) -> str:
     n = re.sub(r"超高清$", "", n)
     n = re.sub(r"[.。·]+$", "", n)
     n = n.strip()
+    n = RENAME_MAP.get(n, n)
     return n if n else clean_channel_name(name)
+
+
+# 显示名重命名映射（归一化后应用）
+RENAME_MAP = {
+    "CCTV-少儿": "CCTV-14少儿",
+}
+
+# 分组规则（正则匹配，顺序匹配第一命中生效）
+CATEGORY_RULES = [
+    # 央视频道仅保留 CCTV-1~17 数字频道（含 CCTV-5＋、CCTV-4K）
+    ("央视频道", (r"^CCTV-(?:[1-9]|1[0-7])(?:\D|$)",)),
+    # 其余 4K 频道（北京卫视4K/爱上4K 等）
+    ("4K频道", (r"4K", r"4k", r"超高清")),
+    # 卫视频道先于重庆本地，使 重庆卫视 归入卫视频道
+    ("卫视频道", (r"卫视",)),
+    ("重庆本地", (r"CQTV", r"重庆")),
+    ("少儿卡通", (r"卡酷", r"金鹰", r"嘉佳", r"动漫", r"早期教育")),
+    ("剧场电影", (r"CHC", r"剧场", r"精彩影视", r"金色频道")),
+    # 央视系付费频道与 CGTN 归付费专题
+    ("付费专题", (r"风云", r"世界地理", r"兵器科技", r"文物宝库", r"求索", r"书画",
+                r"高尔夫", r"游戏", r"快乐垂钓", r"女性时尚", r"生活时尚", r"法治天地",
+                r"卫生健康", r"梨园", r"武术世界", r"电视指南", r"东方财经", r"乐游",
+                r"多彩文体", r"CGTN", r"央视")),
+    ("教育", (r"CETV", r"教育")),
+]
+DEFAULT_CATEGORY = "其他"
+
+
+def categorize_channel(name: str) -> str:
+    """按频道名推导分组 (顺序匹配, 第一命中生效)；先归一化再匹配"""
+    if not name:
+        return DEFAULT_CATEGORY
+    n = normalize_channel_name(name)
+    for group, patterns in CATEGORY_RULES:
+        if any(re.search(p, n) for p in patterns):
+            return group
+    return DEFAULT_CATEGORY
 
 
 GROUP_TITLE_MAP = {
@@ -35,36 +73,6 @@ GROUP_TITLE_MAP = {
 
 def map_group_title(cat: str) -> str:
     return GROUP_TITLE_MAP.get(cat, cat)
-
-
-# ========== 频道分类规则 ==========
-# 数据源的 category 字段全为"全部", 无分类价值, 故按频道名关键词推导分组
-# 顺序匹配, 第一命中生效; 新频道落到"其他"时在此补关键词即可
-CATEGORY_RULES = [
-    # 4K 最具体，放最前，避免 CCTV-4K超高清 落入央视频道
-    ("4K频道", ("4K", "4k", "超高清")),
-    ("重庆本地", ("CQTV", "重庆")),
-    ("央视频道", ("CCTV", "CGTN", "央视")),
-    ("卫视频道", ("卫视",)),
-    ("少儿卡通", ("卡酷", "金鹰", "嘉佳", "动漫", "早期教育")),
-    ("剧场电影", ("CHC", "剧场", "精彩影视", "金色频道")),
-    ("付费专题", ("风云", "世界地理", "兵器科技", "文物宝库", "求索", "书画",
-                "高尔夫", "游戏", "快乐垂钓", "女性时尚", "生活时尚", "法治天地",
-                "卫生健康", "梨园", "武术世界", "电视指南", "东方财经", "乐游",
-                "多彩文体")),
-    ("教育", ("CETV", "教育")),
-]
-DEFAULT_CATEGORY = "其他"
-
-
-def categorize_channel(name: str) -> str:
-    """按频道名推导分组 (顺序匹配, 第一命中生效)"""
-    if not name:
-        return DEFAULT_CATEGORY
-    for group, keywords in CATEGORY_RULES:
-        if any(kw in name for kw in keywords):
-            return group
-    return DEFAULT_CATEGORY
 
 
 def fmt14_to_iso(fmt14: str) -> str:
