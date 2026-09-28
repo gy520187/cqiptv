@@ -82,6 +82,8 @@ M3U 中的图标地址来自 ICON_HOST，需改成第三方播放器实际能访
 
 M3U 首行 `#EXTM3U` 带 `x-tvg-url` 属性指向节目单地址，默认 `ICON_HOST/epg.xml.gz`（gzip 版，体积约为 xml 的 1/10）；播放器走独立 EPG 入口时在 `.env` 中设置 `EPG_URL` 为完整地址（如 `ICON_HOST/epg.xml`）。
 
+XMLTV 的 programme `start/stop` 默认输出 **UTC 时间 + `+0000`**（主流 IPTV 播放器按 UTC 解析 XMLTV，避免“当前播放”偏移 8 小时）。若你的播放器按本地时间解析，把 `iptv/constants.py` 的 `EPG_UTC_TIME` 置为 `False`，改为输出北京时间 `+0800`。
+
 ## 外网 IPv6 访问
 
 1. `.env` 中设置 `WEB_AUTH=用户名:密码`——公网暴露必须启用，否则任何人都能通过 `/api/config` 读取机顶盒凭据

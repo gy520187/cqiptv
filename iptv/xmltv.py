@@ -1,6 +1,7 @@
 # iptv/xmltv.py
 import os
 import gzip
+from datetime import datetime, timedelta
 from xml.sax.saxutils import escape
 from . import constants
 from .utils import normalize_channel_name
@@ -9,13 +10,26 @@ from .utils import normalize_channel_name
 class XMLTVGenerator:
     def __init__(self, cfg, logger):
         self.cfg, self.logger = cfg, logger
-        self.tz = "+0800"
+        self.src_tz = "+0800"   # 运营商节目时间为北京时间
 
     def _t(self, fmt14):
+        """
+        14 位北京时间(YYYYMMDDHHMMSS) -> XMLTV programme start/stop。
+        默认输出 UTC 时间 +0000：多数 IPTV 播放器把 XMLTV 时间戳当 UTC 处理，
+        若直接给 +0800 会整体偏移 8 小时导致"当前播放"定位失败。
+        需要本地时间时置 constants.EPG_UTC_TIME=False，输出原值 +0800。
+        """
         s = str(fmt14)
         if len(s) != 14:
             return ""
-        return f"{s} {self.tz}"
+        try:
+            dt = datetime.strptime(s, "%Y%m%d%H%M%S")
+        except ValueError:
+            return ""
+        if constants.EPG_UTC_TIME:
+            dt -= timedelta(hours=8)
+            return dt.strftime("%Y%m%d%H%M%S") + " +0000"
+        return s + " +0800"
 
     def build(self, channels, epgs):
         lines = ['<?xml version="1.0" encoding="UTF-8"?>']

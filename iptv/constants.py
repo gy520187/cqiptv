@@ -48,6 +48,11 @@ ICON_HOST = os.getenv("ICON_HOST", "http://your-server:6060")   # M3U 引用的�
 EPG_URL = os.getenv("EPG_URL") or f"{ICON_HOST}/epg.xml.gz"     # M3U 头部 x-tvg-url 指向的节目单地址，留空默认 ICON_HOST/epg.xml.gz（gzip 版体积约为 xml 的 1/10）
 ICON_FORCE = False
 
+# ========== XMLTV ==========
+# 输出 UTC 时间(+0000)，兼容按 UTC 解析 XMLTV 的播放器（主流 IPTV 播放器行为）
+# 置 False 则输出北京本地时间(+0800)
+EPG_UTC_TIME = True
+
 # ========== 输出 ==========
 OUTPUT_DIR = "output"
 OUTPUT_FORMAT = "both"
