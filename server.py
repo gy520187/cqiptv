@@ -35,8 +35,8 @@ def no_cache_html(response):
 
 # 外网访问鉴权: 环境变量 WEB_AUTH=user:password, 留空则不启用
 WEB_AUTH = os.getenv("WEB_AUTH", "")
-# 播放器直接订阅的数据源, 免鉴权
-PUBLIC_PREFIXES = ("/playlist.m3u", "/epg.xml", "/data/icon")
+# 播放器直接订阅的数据源与健康检查, 免鉴权
+PUBLIC_PREFIXES = ("/playlist.m3u", "/epg.xml", "/data/icon", "/healthz")
 
 
 @app.before_request
@@ -55,11 +55,17 @@ def check_auth():
 @app.before_request
 def check_first_run():
     allowed = ("/setup", "/api/config/save", "/api/config/test",
-               "/static", "/data/icon")
+               "/static", "/data/icon", "/healthz")
     if any(request.path.startswith(p) for p in allowed):
         return
     if api.is_first_run() and request.path != "/setup":
         return redirect("/setup")
+
+
+@app.route("/healthz")
+def healthz():
+    """容器健康检查端点：始终返回 200，免鉴权、不受首次配置重定向影响"""
+    return "ok"
 
 
 @app.route("/")

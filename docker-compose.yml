@@ -1,60 +1,86 @@
+# ============================================================
+# IPTV 采集工具 Docker Compose 配置
+# 首次运行请先执行 bash init.sh（自动生成 config.yaml 与 .env）
+# ============================================================
+
+# 公共配置片段：数据卷、环境变量、基础属性
+x-iptv-volumes: &iptv-volumes
+  - ./config.yaml:/app/config.yaml
+  - ./data:/app/data
+  - ./output:/app/output
+  - ./log:/app/log
+
+x-iptv-env: &iptv-env
+  TZ: Asia/Shanghai
+  # M3U 中引用的图标地址，需为播放器可达的地址（在 .env 中配置）
+  ICON_HOST: ${ICON_HOST:-http://your-server:6060}
+  # M3U 头部 x-tvg-url 的节目单地址（可选，留空默认 ICON_HOST/epg.xml.gz）
+  EPG_URL: ${EPG_URL:-}
+
+x-iptv-common: &iptv-common
+  restart: unless-stopped
+  networks:
+    - iptv-net
+
+# 日志轮转，避免容器 stdout 无限增长
+x-iptv-logging: &iptv-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
+  # ---------- Web 服务（默认端口 6060） ----------
   iptv-web:
     build: .
     image: iptv:latest
     container_name: iptv-web
-    restart: unless-stopped
+    <<: *iptv-common
     ports:
       # 宿主机与容器端口一致（默认 6060，避开浏览器禁用的 6000），可通过 .env 的 WEB_PORT 修改宿主机侧
       - "${WEB_PORT:-6060}:6060"
-    volumes:
-      # 持久化数据
-      # 首次运行请先执行 bash init.sh 自动生成 config.yaml（否则 Docker 会把挂载点创建成目录导致启动失败）
-      - ./config.yaml:/app/config.yaml
-      - ./data:/app/data
-      - ./output:/app/output
-      - ./log:/app/log
+    volumes: *iptv-volumes
     environment:
-      - TZ=Asia/Shanghai
-      # M3U 中引用的图标地址，需为播放器可达的地址（在 .env 中配置）
-      - ICON_HOST=${ICON_HOST:-http://your-server:6060}
-      # M3U 头部 x-tvg-url 的节目单地址（可选，留空默认 ICON_HOST/epg.xml）
-      - EPG_URL=${EPG_URL:-}
+      <<: *iptv-env
       # 外网访问鉴权（可选），格式 user:password，留空不启用
-      - WEB_AUTH=${WEB_AUTH:-}
-    # 资源限制（可选）
+      WEB_AUTH: ${WEB_AUTH:-}
+    # 健康检查：Web 就绪后 scheduler 才启动
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:6060/healthz', timeout=3).status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging: *iptv-logging
     deploy:
       resources:
         limits:
           cpus: "2"
           memory: 1G
-    networks:
-      - iptv-net
 
-  # 定时采集（可选，与 Web 共用一个镜像）
+  # ---------- 定时采集（可选，与 Web 共用一个镜像） ----------
   iptv-scheduler:
     image: iptv:latest
     container_name: iptv-scheduler
-    restart: unless-stopped
-    volumes:
-      # 首次运行请先执行 bash init.sh 自动生成 config.yaml
-      - ./config.yaml:/app/config.yaml
-      - ./data:/app/data
-      - ./output:/app/output
-      - ./log:/app/log
+    <<: *iptv-common
+    volumes: *iptv-volumes
     environment:
-      - TZ=Asia/Shanghai
-      # scheduler 采集时同样会生成 M3U，需要一致的图标地址
-      - ICON_HOST=${ICON_HOST:-http://your-server:6060}
-      - EPG_URL=${EPG_URL:-}
-    # scheduler 无 Web 服务，禁用镜像自带的 6060 端口健康检查
+      <<: *iptv-env
+      # scheduler 采集时同样会生成 M3U，需要一致的图标地址（已在公共环境变量中）
+    # 等待 Web 健康检查通过后再启动，避免与 Web 并发初始化共享配置
+    depends_on:
+      iptv-web:
+        condition: service_healthy
+    # scheduler 无 Web 服务，禁用镜像自带的健康检查
     healthcheck:
       disable: true
     command: ["python", "scheduler.py"]
-    depends_on:
-      - iptv-web
-    networks:
-      - iptv-net
+    logging: *iptv-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1G
 
 networks:
   iptv-net:
