@@ -117,6 +117,8 @@ body {
     background: linear-gradient(90deg, #818cf8, #a78bfa);
 }
 .actions { display: flex; align-items: center; gap: 10px; }
+.collect-force { color: rgba(255, 255, 255, .85); font-size: 13px; cursor: pointer; user-select: none; }
+.collect-force input { margin-right: 4px; vertical-align: -1px; cursor: pointer; }
 
 /* ========== 按钮 ========== */
 .btn {

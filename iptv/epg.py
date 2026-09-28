@@ -122,11 +122,12 @@ class EPGCollector:
         except OSError as e:
             self.logger.warning(f"清理 EPG 缓存失败: {e}")
 
-    def _fetch_days(self, channel_id):
+    def _fetch_days(self, channel_id, force=False):
         """
         逐天拉取一个频道 ID 的全部节目，按 (起止,标题) 去重。
-        每拉取一天立即落盘为单文件；后续更新时先检查本地缓存，
-        命中则跳过网络请求，仅拉取缺失的天数。
+        每拉取一天立即落盘为单文件；非强制刷新时先检查本地缓存，
+        命中则跳过网络请求，仅拉取缺失的天数；force=True 时忽略
+        缓存，全量重新请求并覆盖本地缓存。
         dateIndex 范围 -EPG_HISTORY_DAYS..DATE_SIZE-1：负数取历史节目
         （供播放器 catchup 回看定位），0 起为未来节目。
         """
@@ -134,9 +135,14 @@ class EPGCollector:
         days = []
         seen = set()
         for day in range(-constants.EPG_HISTORY_DAYS, constants.DATE_SIZE):
-            cached = self._load_cache(channel_id, day)
-            if cached is not None:
-                info, programs = cached
+            if not force:
+                cached = self._load_cache(channel_id, day)
+                if cached is not None:
+                    info, programs = cached
+                else:
+                    info, programs = self._fetch_day(channel_id, day)
+                    self._save_cache(channel_id, day, info, programs)
+                    time.sleep(constants.INTERVAL)
             else:
                 info, programs = self._fetch_day(channel_id, day)
                 self._save_cache(channel_id, day, info, programs)
@@ -154,19 +160,20 @@ class EPGCollector:
                 days.append(fresh)
         return dates, days
 
-    def fetch(self, channel_id, alt_ids=None):
+    def fetch(self, channel_id, alt_ids=None, force=False):
         """
         运营商接口一次只返回 dateIndex 对应一天的节目单（原始抓包证实：
         dateSize=8 的响应也只有当天 36 条节目），逐天请求拼出多日 EPG。
         同名频道存在高清/SD 等变体时，tVod 数据可能只挂在某个 ID 上
         （实测 云南卫视(高清)=642905769 无数据，SD 变体=1672 有）：
         主 ID 8 天全空则依次回退备用 ID。返回仍按主 channelID 语义使用。
+        force=True 时忽略缓存全量刷新。
         """
-        dates, days = self._fetch_days(channel_id)
+        dates, days = self._fetch_days(channel_id, force=force)
         if not days and alt_ids:
             for alt in alt_ids:
                 self.logger.info(f"    channelId={channel_id} 无节目数据, 回退备用 ID {alt}")
-                alt_dates, alt_days = self._fetch_days(alt)
+                alt_dates, alt_days = self._fetch_days(alt, force=force)
                 if alt_days:
                     dates = alt_dates
                     days = alt_days
@@ -176,11 +183,13 @@ class EPGCollector:
             "programs": days,
         }
 
-    def fetch_all(self, channels, alias_map=None):
+    def fetch_all(self, channels, alias_map=None, force=False):
         alias_map = alias_map or {}
         total = len(channels)
         if constants.MAX_CHANNELS > 0:
             total = min(total, constants.MAX_CHANNELS)
+        if force:
+            self.logger.info("强制全量刷新模式：忽略本地缓存，重新请求全部日期")
         self.logger.info(
             f"采集节目单，{total} 频道 × "
             f"{constants.EPG_HISTORY_DAYS} 天历史 + {constants.DATE_SIZE} 天未来")
@@ -195,7 +204,7 @@ class EPGCollector:
             for i, ch in enumerate(channels[:total]):
                 cid = ch["channelID"]
                 self.logger.info(f"  [{i+1}/{total}] {ch['channelName']}")
-                epg = self.fetch(cid, alt_ids_for(ch, alias_map))
+                epg = self.fetch(cid, alt_ids_for(ch, alias_map), force=force)
                 n_days = len(epg["programs"])
                 n_progs = sum(len(d) for d in epg["programs"])
                 self.logger.info(f"    {n_days} 天 / {n_progs} 条节目")
@@ -210,7 +219,7 @@ class EPGCollector:
             for i, ch in enumerate(channels[:total]):
                 cid = ch["channelID"]
                 self.logger.info(f"  [{i+1}/{total}] {ch['channelName']}")
-                futures[pool.submit(self.fetch, cid, alt_ids_for(ch, alias_map))] = (cid, ch)
+                futures[pool.submit(self.fetch, cid, alt_ids_for(ch, alias_map), force)] = (cid, ch)
             done = 0
             for fut in as_completed(futures):
                 cid, ch = futures[fut]

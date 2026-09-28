@@ -79,7 +79,12 @@ function watchCollect() {
 }
 
 async function startCollect() {
-    const r = await fetch('/api/collect', { method: 'POST' });
+    const force = document.getElementById('collect-force')?.checked || false;
+    const r = await fetch('/api/collect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ force_refresh: force }),
+    });
     const d = await r.json();
     if (d.ok) watchCollect();
     else toast(d.msg || '采集进行中');

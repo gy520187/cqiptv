@@ -83,6 +83,7 @@ docker compose up -d --build
 pip install -r requirements.txt
 python server.py        # Web 界面: http://localhost:6060
 python main.py          # 命令行采集（一次性）
+python main.py --refresh-epg   # 强制全量刷新 EPG（忽略本地缓存）
 python scheduler.py    # 定时采集
 ```
 
@@ -96,7 +97,7 @@ python scheduler.py    # 定时采集
 
 1. **配置页**：填入抓包获取的认证参数，点击「保存」，再点击「连接测试」验证参数是否可用。
 2. **破解页**：`key` 未破解时在此发起暴力破解（可设起始/结束/进程数），破解成功后 `key` 自动回写到 `config.yaml`。
-3. **总览页**：点击「开始采集」，页面实时显示采集进度；完成后可下载 `playlist.m3u`、`epg.xml`、`epg.xml.gz`。
+3. **总览页**：点击「采集」按钮实时采集（可勾选「强制刷新」忽略 EPG 缓存全量重抓），页面实时显示采集进度；完成后可下载 `playlist.m3u`、`epg.xml`、`epg.xml.gz`。
 4. **频道页**：浏览采集到的频道列表及组播/回看地址。
 5. **EPG 页**：按频道查看节目单。
 6. **定时任务页**：设置 cron 表达式（默认每天 04:00），支持多个任务；保存后 scheduler 自动重新加载，无需重启容器。
@@ -126,7 +127,7 @@ EPG:  http://<服务器IP>:6060/epg.xml.gz
 - 后续更新时先检查本地缓存，已存在的日期直接复用，只拉取缺失的天数，大幅减少请求量并加速采集。
 - 缓存文件夹自动过期清理：只保留历史 7 天到未来 8 天的数据，范围外的自动删除。
 - 缓存损坏的文件会自动重新拉取并修复。
-- 如需强制全量刷新，删除 `data/epg_cache/` 目录后重新采集即可。
+- 强制全量刷新：Web 总览页勾选「强制刷新」后点击采集，或命令行运行 `python main.py --refresh-epg`，忽略缓存重新请求全部日期并覆盖本地缓存。
 
 ## 定时任务
 

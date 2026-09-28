@@ -159,8 +159,10 @@ def api_config_test():
 
 @app.route("/api/collect", methods=["POST"])
 def api_collect():
-    ok = api.start_collect()
-    return jsonify({"ok": ok, "msg": "采集已启动" if ok else "采集进行中"})
+    data = request.get_json(silent=True) or {}
+    ok = api.start_collect(bool(data.get("force_refresh")))
+    msg = "强制刷新已启动" if (ok and data.get("force_refresh")) else ("采集已启动" if ok else "采集进行中")
+    return jsonify({"ok": ok, "msg": msg})
 
 
 @app.route("/api/collect/progress")

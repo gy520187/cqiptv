@@ -19,7 +19,7 @@ from iptv.icon import IconHandler
 from iptv.storage import Storage
 
 
-def collect(allow_crack=True):
+def collect(allow_crack=True, force_refresh=False):
     logger = None
     try:
         cfg = load_config("config.yaml")
@@ -100,7 +100,7 @@ def collect(allow_crack=True):
         # ========== 节目单 ==========
         # 同名变体备用 ID 映射: 高清 ID 在 tVod 无节目时回退 SD/其他变体 ID
         alias_map = build_alias_map(variants_all, channel_infos)
-        epgs = EPGCollector(cfg, http, logger).fetch_all(channels, alias_map)
+        epgs = EPGCollector(cfg, http, logger).fetch_all(channels, alias_map, force=force_refresh)
         logger.info(f"节目单: {len(epgs)} 个频道")
 
         # ========== 外部 EPG 补充 ==========
@@ -170,4 +170,9 @@ if __name__ == "__main__":
         "--crack", action="store_true",
         help="key 缺失或失效时自动暴力破解（8 进程，可能耗时数小时）",
     )
-    collect(allow_crack=parser.parse_args().crack)
+    parser.add_argument(
+        "--refresh-epg", action="store_true",
+        help="强制全量刷新 EPG，忽略本地缓存重新请求全部日期",
+    )
+    args = parser.parse_args()
+    collect(allow_crack=args.crack, force_refresh=args.refresh_epg)

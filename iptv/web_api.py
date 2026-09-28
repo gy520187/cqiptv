@@ -123,19 +123,20 @@ class WebAPI:
         except Exception as e:
             return False, str(e)
 
-    def start_collect(self):
+    def start_collect(self, force_refresh=False):
         if not self._collect_progress["done"]:
             return False
         self._collect_progress = {"done": False, "msg": "启动中..."}
-        self._collect_thread = threading.Thread(target=self._do_collect, daemon=True)
+        self._collect_thread = threading.Thread(
+            target=self._do_collect, args=(force_refresh,), daemon=True)
         self._collect_thread.start()
         return True
 
-    def _do_collect(self):
+    def _do_collect(self, force_refresh=False):
         try:
             from main import collect
             self._collect_progress["msg"] = "采集中..."
-            collect()
+            collect(force_refresh=force_refresh)
             self._collect_progress = {"done": True, "msg": "完成"}
         except BaseException as e:
             # collect() 内部用 sys.exit 终止（SystemExit 是 BaseException），
