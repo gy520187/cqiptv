@@ -49,7 +49,10 @@ class Config:
             self.yaml.dump(self.raw, f)
 
     def get(self, key, default=""):
-        return self.raw.get(key, default) or default
+        v = self.raw.get(key)
+        if v is None:
+            return default
+        return v
 
     def set(self, key, value, write_back=False):
         self.raw[key] = value

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}定时任务{% endblock %}
+{% block content %}
+<h1>定时任务配置</h1>
+<div class="card sched-card">
+    <label style="display:flex;align-items:center;gap:8px;font-size:14px">
+        <input type="checkbox" id="sched-enabled" style="width:auto"> 启用定时采集
+    </label>
+    <label>cron 表达式
+        <input id="sched-cron" type="text" placeholder="0 4 * * *">
+    </label>
+    <div class="form-tip">
+        格式：<code>分 时 日 月 周</code>。示例：
+        <code>0 4 * * *</code> 每天 04:00 ·
+        <code>*/30 * * * *</code> 每 30 分钟 ·
+        <code>0 2,14 * * *</code> 每天 02:00 和 14:00
+    </div>
+    <div class="form-tip" id="next-run" style="font-weight:600"></div>
+    <button class="btn btn-primary" onclick="saveConfig()">保存</button>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+async function loadConfig() {
+    const r = await fetch('/api/scheduler/config');
+    const d = await r.json();
+    document.getElementById('sched-enabled').checked = d.enabled;
+    document.getElementById('sched-cron').value = d.cron;
+    renderNext(d.next_run);
+}
+function renderNext(next) {
+    document.getElementById('next-run').textContent =
+        next ? '下次运行时间：' + next : '暂无法计算下次运行时间';
+}
+async function saveConfig() {
+    const data = {
+        enabled: document.getElementById('sched-enabled').checked,
+        cron: document.getElementById('sched-cron').value.trim(),
+    };
+    const r = await fetch('/api/scheduler/config', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data),
+    });
+    const d = await r.json();
+    if (d.ok) {
+        toast('已保存');
+        renderNext(d.msg);
+    } else {
+        toast(d.msg || '保存失败');
+    }
+}
+loadConfig();
+</script>
+{% endblock %}

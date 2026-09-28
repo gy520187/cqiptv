@@ -78,6 +78,23 @@ def logs_page():
     return render_template("logs.html", cfg=cfg)
 
 
+@app.route("/scheduler")
+def scheduler_page():
+    return render_template("scheduler.html", cfg=cfg)
+
+
+@app.route("/api/scheduler/config")
+def api_scheduler_config():
+    return jsonify(api.get_scheduler_config())
+
+
+@app.route("/api/scheduler/config", methods=["POST"])
+def api_scheduler_save():
+    data = request.get_json(silent=True) or {}
+    ok, msg = api.save_scheduler_config(data)
+    return jsonify({"ok": ok, "msg": msg})
+
+
 @app.route("/api/status")
 def api_status():
     return jsonify(api.get_status())

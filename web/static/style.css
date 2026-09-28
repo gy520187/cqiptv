@@ -170,6 +170,40 @@ h2 { font-size: 16px; margin: 28px 0 12px; color: var(--text); font-weight: 600;
 .url-cell:hover { background: var(--primary); color: #fff; }
 .url-empty { color: #cbd5e1; }
 
+/* ========== 定时任务页 ========== */
+.sched-card {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-width: 560px;
+}
+.sched-card label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+.sched-card label input[type="text"] {
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.sched-card label input[type="checkbox"] { width: auto; }
+.form-tip { font-size: 12px; color: var(--text-secondary); line-height: 1.7; }
+.form-tip code {
+    background: var(--primary-light);
+    color: var(--primary);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
 /* ========== EPG 分组布局 ========== */
 .epg-layout { display: flex; gap: 16px; align-items: flex-start; }
 .epg-side {
