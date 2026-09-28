@@ -15,6 +15,7 @@ class ExternalEPG:
         self.cfg = cfg
         self.logger = logger
         self.url = url or constants.EXTERNAL_EPG_URL
+        self._urls = [u.strip() for u in str(self.url).split(",") if u.strip()]
         self._by_name = {}
 
     @staticmethod
@@ -34,25 +35,40 @@ class ExternalEPG:
         return dt.strftime("%Y%m%d%H%M%S")
 
     def load(self):
-        if not self.url:
+        loaded = 0
+        for url in self._urls:
+            if self._load_one(url):
+                loaded += 1
+        if loaded:
+            self.logger.info(f"外部 EPG 加载成功: {loaded} 个源, {len(self._by_name)} 个频道")
+        return loaded > 0
+
+    def _load_one(self, url):
+        if not url:
             return False
         try:
-            if self.url.startswith(("http://", "https://")):
-                req = urllib.request.Request(self.url, headers={"User-Agent": "Mozilla/5.0"})
+            if url.startswith(("http://", "https://")):
+                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
                 with urllib.request.urlopen(req, timeout=constants.EXTERNAL_EPG_TIMEOUT) as resp:
                     data = resp.read()
             else:
-                with open(self.url, "rb") as f:
+                with open(url, "rb") as f:
                     data = f.read()
             if data[:2] == b"\x1f\x8b":
                 xml = gzip.decompress(data).decode("utf-8", errors="replace")
             else:
                 xml = data.decode("utf-8", errors="replace")
-            self._parse(xml)
-            self.logger.info(f"外部 EPG 加载成功: {len(self._by_name)} 个频道")
+            by_name = self._parse(xml)
+            # 先到先得：后续源只补充首个源没有的频道
+            added = 0
+            for name, progs in by_name.items():
+                if name not in self._by_name:
+                    self._by_name[name] = progs
+                    added += 1
+            self.logger.info(f"外部 EPG 源 {url}: {len(by_name)} 个频道, 新增 {added}")
             return True
         except Exception as e:
-            self.logger.error(f"外部 EPG 加载失败: {e}")
+            self.logger.error(f"外部 EPG 源 {url} 加载失败: {e}")
             return False
 
     def _parse(self, xml):
@@ -85,7 +101,7 @@ class ExternalEPG:
 
         for name in by_name:
             by_name[name].sort(key=lambda x: x.get("beginTimeFormat", ""))
-        self._by_name = by_name
+        return by_name
 
     def get_programs(self, channel_name):
         """按频道名查找外部节目；精确匹配优先，其次双向包含匹配（如 求索 -> 求索记录）"""
