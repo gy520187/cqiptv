@@ -103,6 +103,25 @@ def collect(allow_crack=True):
         epgs = EPGCollector(cfg, http, logger).fetch_all(channels, alias_map)
         logger.info(f"节目单: {len(epgs)} 个频道")
 
+        # ========== 外部 EPG 补充 ==========
+        # 运营商数据优先：仅对无节目数据的频道，用第三方 EPG 补充
+        if constants.EXTERNAL_EPG_URL:
+            from iptv.external_epg import ExternalEPG
+            ext = ExternalEPG(cfg, logger)
+            if ext.load():
+                filled = 0
+                for ch in channels:
+                    if not isinstance(ch, dict):
+                        continue
+                    epg = epgs.get(ch.get("channelID"), {})
+                    if epg and epg.get("programs"):
+                        continue
+                    progs = ext.get_programs(ch.get("channelName", ""))
+                    if progs:
+                        epgs[ch.get("channelID")] = {"programs": [progs]}
+                        filled += 1
+                logger.info(f"外部 EPG 补充: {filled} 个频道")
+
         # ========== 图标 ==========
         logger.info(">>> 开始处理图标")
         IconHandler(cfg, logger).ensure_all(channels, force=constants.ICON_FORCE)
