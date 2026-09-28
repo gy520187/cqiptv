@@ -188,6 +188,49 @@ class WebAPI:
     def get_crack_progress(self):
         return self._crack_progress
 
+    def get_scheduler_config(self):
+        enabled_raw = self.cfg.get("scheduler_enabled", "")
+        enabled = (str(enabled_raw).lower() in ("1", "true", "yes", "on")
+                   if enabled_raw != "" else constants.SCHEDULER_ENABLED)
+        cron = self.cfg.get("scheduler_cron", "") or constants.SCHEDULER_CRON
+        nr = self._next_run(cron)
+        return {
+            "enabled": enabled,
+            "cron": cron,
+            "default_enabled": constants.SCHEDULER_ENABLED,
+            "default_cron": constants.SCHEDULER_CRON,
+            "next_run": nr.strftime("%Y-%m-%d %H:%M:%S") if nr else None,
+        }
+
+    def save_scheduler_config(self, data):
+        try:
+            from apscheduler.triggers.cron import CronTrigger
+            cron = str(data.get("cron", "")).strip() or constants.SCHEDULER_CRON
+            try:
+                CronTrigger.from_crontab(cron)
+            except Exception as e:
+                return False, f"cron 表达式无效: {e}"
+            enabled = bool(data.get("enabled"))
+            self.cfg.set("scheduler_enabled", enabled)
+            self.cfg.set("scheduler_cron", cron)
+            self.cfg.save()
+            self.logger.info(f"定时任务配置已保存: enabled={enabled}, cron={cron}")
+            nr = self._next_run(cron)
+            return True, (nr.strftime("%Y-%m-%d %H:%M:%S") if nr else "无法计算下次运行时间")
+        except Exception as e:
+            self.logger.error(f"保存定时任务配置失败: {e}")
+            return False, str(e)
+
+    @staticmethod
+    def _next_run(cron):
+        try:
+            from datetime import datetime
+            from apscheduler.triggers.cron import CronTrigger
+            trigger = CronTrigger.from_crontab(cron)
+            return trigger.get_next_fire_time(None, datetime.now())
+        except Exception:
+            return None
+
     def get_logs(self, lines=200):
         path = os.path.join(constants.LOG_DIR, constants.LOG_FILE)
         if not os.path.exists(path):
