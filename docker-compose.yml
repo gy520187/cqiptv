@@ -1,9 +1,9 @@
 # ============================================================
 # IPTV 采集工具 Docker Compose 配置
-# 首次运行请先执行 bash init.sh（自动生成 config.yaml 与 .env）
+# 首次运行请先执行 bash init.sh
 # ============================================================
 
-# 公共配置片段：数据卷、环境变量、基础属性
+# 公共配置：数据卷、环境变量、重启策略、网络、资源限制、日志轮转
 x-iptv-volumes: &iptv-volumes
   - ./config.yaml:/app/config.yaml
   - ./data:/app/data
@@ -12,22 +12,21 @@ x-iptv-volumes: &iptv-volumes
 
 x-iptv-env: &iptv-env
   TZ: Asia/Shanghai
-  # M3U 中引用的图标地址，需为播放器可达的地址（在 .env 中配置）
-  ICON_HOST: ${ICON_HOST:-http://your-server:6060}
-  # M3U 头部 x-tvg-url 的节目单地址（可选，留空默认 ICON_HOST/epg.xml.gz）
-  EPG_URL: ${EPG_URL:-}
+  ICON_HOST: ${ICON_HOST:-http://your-server:6060}   # 播放器可达的图标地址
+  EPG_URL: ${EPG_URL:-}                              # M3U 头部 x-tvg-url
 
 x-iptv-common: &iptv-common
   restart: unless-stopped
-  networks:
-    - iptv-net
+  networks: [iptv-net]
+  deploy:
+    resources:
+      limits:
+        cpus: "2"
+        memory: 1G
 
-# 日志轮转，避免容器 stdout 无限增长
 x-iptv-logging: &iptv-logging
   driver: json-file
-  options:
-    max-size: "10m"
-    max-file: "3"
+  options: {max-size: "10m", max-file: "3"}
 
 services:
   # ---------- Web 服务（默认端口 6060） ----------
@@ -37,26 +36,19 @@ services:
     container_name: iptv-web
     <<: *iptv-common
     ports:
-      # 宿主机与容器端口一致（默认 6060），可通过 .env 的 WEB_PORT 修改宿主机侧
-      - "${WEB_PORT:-6060}:6060"
+      - "${WEB_PORT:-6060}:6060"                     # 端口可用 .env 的 WEB_PORT 修改
     volumes: *iptv-volumes
     environment:
       <<: *iptv-env
-      # 外网访问鉴权（可选），格式 user:password，留空不启用
-      WEB_AUTH: ${WEB_AUTH:-}
+      WEB_AUTH: ${WEB_AUTH:-}                        # 外网访问鉴权 user:password（可选）
     # 健康检查：Web 就绪后 scheduler 才启动
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:6060/healthz', timeout=3).status==200 else 1)"]
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:6060/healthz',timeout=3)"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 10s
     logging: *iptv-logging
-    deploy:
-      resources:
-        limits:
-          cpus: "2"
-          memory: 1G
 
   # ---------- 定时采集（可选，与 Web 共用一个镜像） ----------
   iptv-scheduler:
@@ -64,23 +56,13 @@ services:
     container_name: iptv-scheduler
     <<: *iptv-common
     volumes: *iptv-volumes
-    environment:
-      <<: *iptv-env
-      # scheduler 采集时同样会生成 M3U，需要一致的图标地址（已在公共环境变量中）
-    # 等待 Web 健康检查通过后再启动，避免与 Web 并发初始化共享配置
+    environment: *iptv-env
     depends_on:
       iptv-web:
-        condition: service_healthy
-    # scheduler 无 Web 服务，禁用镜像自带的健康检查
-    healthcheck:
-      disable: true
+        condition: service_healthy                    # 等待 Web 健康检查通过
+    healthcheck: {disable: true}                       # scheduler 无 Web 服务
     command: ["python", "scheduler.py"]
     logging: *iptv-logging
-    deploy:
-      resources:
-        limits:
-          cpus: "2"
-          memory: 1G
 
 networks:
   iptv-net:
