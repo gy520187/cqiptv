@@ -83,6 +83,7 @@ def job():
 def main_loop():
     cfg.load()
     logger.info("定时任务启动（多任务循环调度，保存配置后自动重新加载）")
+    last_status_log = 0.0
     while True:
         try:
             _maybe_reload()
@@ -95,12 +96,15 @@ def main_loop():
                 logger.error(f"定时任务 cron 均无效: {jobs}")
                 time.sleep(60)
                 continue
-            for cron in jobs:
-                t = _next_run(cron)
-                if t:
-                    logger.info(f"  任务 cron={cron} 下次运行 {t.strftime('%Y-%m-%d %H:%M:%S')}")
+            if time.time() - last_status_log >= 60:
+                for cron in jobs:
+                    t = _next_run(cron)
+                    if t:
+                        logger.info(f"  任务 cron={cron} 下次运行 {t.strftime('%Y-%m-%d %H:%M:%S')}")
+                delta = (nr - datetime.now()).total_seconds()
+                logger.info(f"最近触发: {nr.strftime('%Y-%m-%d %H:%M:%S')}（{delta:.0f} 秒后）")
+                last_status_log = time.time()
             delta = (nr - datetime.now()).total_seconds()
-            logger.info(f"最近触发: {nr.strftime('%Y-%m-%d %H:%M:%S')}（{delta:.0f} 秒后）")
             if delta > 60:
                 time.sleep(5)
                 continue
