@@ -194,7 +194,7 @@ class EPGCollector:
             f"采集节目单，{total} 频道 × "
             f"{constants.EPG_HISTORY_DAYS} 天历史 + {constants.DATE_SIZE} 天未来")
 
-        # 采集前清理过期缓存，只保留历史 7 天到未来 8 天
+        # 采集前清理过期缓存，只保留历史 6 天到未来 2 天
         self._prune_cache()
 
         result = {}

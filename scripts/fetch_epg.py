@@ -70,7 +70,7 @@ alt_ids = alt_ids_for(target, alias_map)
 if alt_ids:
     log.info(f"备用 ID: {', '.join(alt_ids)}")
 
-# 逐天拉取节目单（含历史 7 天 + 未来 8 天，主 ID 全空自动回退备用 ID）
+# 逐天拉取节目单（含历史 6 天 + 未来 2 天，主 ID 全空自动回退备用 ID）
 epg = EPGCollector(cfg, http, log).fetch(target["channelID"], alt_ids)
 days = epg["programs"]
 total = sum(len(d) for d in days)
