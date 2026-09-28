@@ -14,6 +14,25 @@ app = Flask(__name__, template_folder="web/templates", static_folder="web/static
 app.config["JSON_AS_ASCII"] = False
 api = WebAPI(cfg, logger)
 
+
+@app.context_processor
+def inject_static_version():
+    """style.css 内容变化后自动更新查询版本号，避免浏览器缓存旧样式"""
+    try:
+        v = int(os.path.getmtime(os.path.join("web", "static", "style.css")))
+    except OSError:
+        v = 1
+    return {"static_version": v}
+
+
+@app.after_request
+def no_cache_html(response):
+    """HTML 不缓存，确保每次访问都拿到最新页面与内联脚本"""
+    ct = response.content_type or ""
+    if ct.startswith("text/html"):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return response
+
 # 外网访问鉴权: 环境变量 WEB_AUTH=user:password, 留空则不启用
 WEB_AUTH = os.getenv("WEB_AUTH", "")
 # 播放器直接订阅的数据源, 免鉴权
