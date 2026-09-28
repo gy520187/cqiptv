@@ -13,6 +13,7 @@ class WebAPI:
     ALLOWED_FIELDS = {
         "AuthenticationIP", "UserID", "mac", "STBID",
         "STBType", "STBVersion", "SoftwareVersion", "Authenticator", "key",
+        "ip",
     }
 
     def __init__(self, cfg, logger):
@@ -136,7 +137,9 @@ class WebAPI:
             self._collect_progress["msg"] = "采集中..."
             collect()
             self._collect_progress = {"done": True, "msg": "完成"}
-        except Exception as e:
+        except BaseException as e:
+            # collect() 内部用 sys.exit 终止（SystemExit 是 BaseException），
+            # 若不捕获，线程会直接死亡且 done 停留在 False，前端永远显示"采集中"
             self.logger.error(f"采集失败: {e}")
             self._collect_progress = {"done": True, "msg": f"失败: {e}"}
 

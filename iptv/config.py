@@ -104,13 +104,13 @@ class Config:
         self.set("key", key, write_back=write_back)
 
     def is_first_run(self) -> bool:
+        # ip 为可选项（auth.py 有默认值），不参与必填校验，否则首次配置后仍会重定向到 /setup
         checks = [
             self.get("AuthenticationIP"),
             self.get("UserID"),
             self.get("mac"),
             self.get("STBID"),
             self.get("STBType"),
-            self.get("ip"),
         ]
         return not all(checks)
 

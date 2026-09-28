@@ -63,19 +63,6 @@ def categorize_channel(name: str) -> str:
     return DEFAULT_CATEGORY
 
 
-GROUP_TITLE_MAP = {
-    "央视": "央视频道",
-    "卫视": "卫视频道",
-    "本地": "重庆本地",
-    "高清": "高清频道",
-    "特色": "特色频道",
-}
-
-
-def map_group_title(cat: str) -> str:
-    return GROUP_TITLE_MAP.get(cat, cat)
-
-
 def fmt14_to_iso(fmt14: str) -> str:
     s = str(fmt14)
     if len(s) != 14:

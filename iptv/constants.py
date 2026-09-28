@@ -42,7 +42,7 @@ IS_COUNTRY_CHANNEL = 1
 EXCLUDE_CHANNELS = {"江苏晚会4K", "江苏晚会4k", "重庆卫视频道"}
 
 # ========== 图标 ==========
-FANMINGMING_BASE = "https://live.fanmingming.cn/tv/{name}.png"
+# 注意: icon.py 中实际使用 gh-proxy 加速的 FANMINGMING_BASE，此路径常量仅供部署参考
 ICON_DIR = "data/icon"
 ICON_HOST = os.getenv("ICON_HOST", "http://your-server:6060")   # M3U 引用的图标地址，改成播放器可达的服务器地址
 EPG_URL = os.getenv("EPG_URL") or f"{ICON_HOST}/epg.xml.gz"     # M3U 头部 x-tvg-url 指向的节目单地址，留空默认 ICON_HOST/epg.xml.gz（gzip 版体积约为 xml 的 1/10）
