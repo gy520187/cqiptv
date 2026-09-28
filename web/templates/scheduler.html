@@ -10,15 +10,12 @@
         </div>
         <div id="job-list"></div>
     </div>
-    <label class="hot-reload-toggle">
-        <input type="checkbox" id="hot-reload">
-        <span>启用配置热更新（关闭后，修改任务需重启 scheduler 容器才生效）</span>
-    </label>
     <div class="toolbar" style="margin-bottom:0">
         <button class="btn btn-default" onclick="addJob()">添加任务</button>
         <button class="btn btn-primary" onclick="saveJobs()">保存全部</button>
         <button class="btn btn-default" onclick="loadJobs()">刷新</button>
     </div>
+    <p class="form-tip">保存配置后 scheduler 会自动重新加载，无需重启容器。</p>
 </div>
 {% endblock %}
 
@@ -30,7 +27,6 @@ async function loadJobs() {
     const r = await fetch('/api/scheduler/config');
     const d = await r.json();
     DEFAULT_CRON = d.default_cron || DEFAULT_CRON;
-    document.getElementById('hot-reload').checked = d.hot_reload !== false;
     jobList.innerHTML = '';
     if (!d.jobs || !d.jobs.length) addJob();
     (d.jobs || []).forEach(j => renderRow(j));
@@ -59,10 +55,7 @@ async function saveJobs() {
     const r = await fetch('/api/scheduler/config', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            jobs,
-            hot_reload: document.getElementById('hot-reload').checked,
-        }),
+        body: JSON.stringify({jobs}),
     });
     const d = await r.json();
     if (d.ok) {

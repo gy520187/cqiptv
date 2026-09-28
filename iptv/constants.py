@@ -77,8 +77,8 @@ WEB_PORT = int(os.getenv("WEB_PORT") or "6060")
 # ========== 定时任务 ==========
 SCHEDULER_ENABLED = True
 SCHEDULER_CRON = "0 4 * * *"
-# 定时任务配置热更新：false 时 scheduler 仅在启动时读取配置，修改后需重启容器生效
-SCHEDULER_HOT_RELOAD = True
+# 定时任务配置变更标记：Web 保存定时任务配置后写入，scheduler 检测到后重新加载配置
+SCHEDULER_RELOAD_FLAG = "data/scheduler_reload.flag"
 
 # ========== 日志 ==========
 LOG_LEVEL = "INFO"

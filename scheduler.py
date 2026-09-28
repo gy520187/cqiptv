@@ -1,4 +1,5 @@
 # scheduler.py
+import os
 import time
 from datetime import datetime
 from apscheduler.triggers.cron import CronTrigger
@@ -31,14 +32,6 @@ def _load_jobs():
     return jobs
 
 
-def _hot_reload_enabled():
-    """配置热更新开关：scheduler_hot_reload 设为 false 时仅启动时读取配置"""
-    raw = cfg.get("scheduler_hot_reload", None)
-    if raw is None:
-        return constants.SCHEDULER_HOT_RELOAD
-    return str(raw).lower() in ("1", "true", "yes", "on")
-
-
 def _next_run(cron, now=None):
     try:
         trigger = CronTrigger.from_crontab(cron)
@@ -56,6 +49,18 @@ def _next_run_multi(jobs, now=None):
     return best
 
 
+def _maybe_reload():
+    """Web 保存定时任务配置后写入标记文件，检测到则重新加载配置"""
+    flag = constants.SCHEDULER_RELOAD_FLAG
+    try:
+        if os.path.exists(flag):
+            cfg.load()
+            os.remove(flag)
+            logger.info("检测到定时任务配置已更新，已重新加载")
+    except OSError as e:
+        logger.error(f"检查配置更新标记失败: {e}")
+
+
 def job():
     logger.info("定时采集开始")
     try:
@@ -66,13 +71,13 @@ def job():
 
 
 def main_loop():
-    hot_reload = _hot_reload_enabled()
+    cfg.load()
+    logger.info("定时任务启动（多任务循环调度，保存配置后自动重新加载）")
     while True:
-        if hot_reload:
-            cfg.load()
+        _maybe_reload()
         jobs = _load_jobs()
         if not jobs:
-            time.sleep(60)
+            time.sleep(5)
             continue
         nr = _next_run_multi(jobs)
         if nr is None:
@@ -86,11 +91,10 @@ def main_loop():
         delta = (nr - datetime.now()).total_seconds()
         logger.info(f"最近触发: {nr.strftime('%Y-%m-%d %H:%M:%S')}（{delta:.0f} 秒后）")
         if delta > 60:
-            time.sleep(60)
+            time.sleep(5)
             continue
         time.sleep(max(delta, 1))
-        if hot_reload:
-            cfg.load()
+        _maybe_reload()
         jobs = _load_jobs()
         if not jobs:
             continue
@@ -104,5 +108,5 @@ def main_loop():
 
 
 if __name__ == "__main__":
-    logger.info("定时任务启动（多任务循环调度，配置热更新）")
+    logger.info("定时任务启动（多任务循环调度，配置变更后自动重新加载）")
     main_loop()

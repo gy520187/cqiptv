@@ -305,23 +305,6 @@ h2 { font-size: 16px; margin: 30px 0 14px; font-weight: 700; color: var(--text);
     font-size: 12px;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
-.hot-reload-toggle {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 2px 0;
-    flex-wrap: wrap;
-}
-.hot-reload-toggle input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    accent-color: var(--primary);
-    cursor: pointer;
-    flex: 0 0 auto;
-}
 .sched-jobs {
     display: flex;
     flex-direction: column;
