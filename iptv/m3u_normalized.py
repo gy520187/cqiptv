@@ -29,12 +29,37 @@ class NormalizedM3UGenerator:
             url += f"?fcc={fcc_ip}:{fcc_port}"
         return url
 
+    @staticmethod
+    def _cctv_sort_key(name):
+        """央视频道排序键：按 CCTV-编号 升序，4K/5＋ 紧跟其数字频道之后"""
+        n = normalize_channel_name(name)
+        m = re.match(r"^CCTV-(\d+)", n)
+        if not m:
+            return (99, 0, n)
+        num = int(m.group(1))
+        rest = n[len(m.group(0)):]
+        prio = 1 if rest[:1] in ("K", "k", "+", "＋") else 0
+        return (num, prio, n)
+
+    def _channel_order_key(self, idx, ch):
+        """央视频道整体前置并按编号排序；其余频道保持原始顺序"""
+        name = ch.get("channelName", "") if isinstance(ch, dict) else ""
+        if categorize_channel(name) == "央视频道":
+            return (0, *self._cctv_sort_key(name), idx)
+        return (1, 0, 0, "", idx)
+
     def build(self, channels, channel_infos):
         lines = [f'#EXTM3U x-tvg-url="{constants.EPG_URL}"']
         if not channels:
             return "\n".join(lines)
         if not channel_infos:
             channel_infos = {}
+
+        channels = sorted(
+            enumerate(channels),
+            key=lambda i_ch: self._channel_order_key(i_ch[0], i_ch[1]),
+        )
+        channels = [ch for _, ch in channels]
 
         for ch in channels:
             if not ch or not isinstance(ch, dict):
