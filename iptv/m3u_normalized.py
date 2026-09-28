@@ -65,10 +65,6 @@ class NormalizedM3UGenerator:
             if not ch or not isinstance(ch, dict):
                 continue
 
-            #cat = ch.get("category", "")
-            #if cat == "全部":
-                #continue
-
             cid = ch.get("channelID")
             name = ch.get("channelName", "")
             if not name:

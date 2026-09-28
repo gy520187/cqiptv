@@ -52,6 +52,9 @@ class EPGCollector:
             return None, []
         if not isinstance(data, list) or len(data) < 2:
             return None, []
+        # 防御性检查：data[0] 应携带日期窗口信息，data[1] 应为节目列表容器
+        if not isinstance(data[0], dict) or not isinstance(data[1], dict):
+            return None, []
         pages = data[1].get("data", []) or []
         programs = [
             p
