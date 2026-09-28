@@ -129,6 +129,16 @@ def collect(allow_crack=True):
 
         # ========== 输出 ==========
         logger.info(">>> 1. Storage.save 开始")
+        # 组播/时移地址并入频道数据，供 Web 界面展示 RTSP/RTP 链接
+        for ch in channels:
+            if not ch or not isinstance(ch, dict):
+                continue
+            info = channel_infos.get(ch.get("channelID")) or {}
+            if isinstance(info, dict):
+                ch.setdefault("channel_url", info.get("channel_url", ""))
+                ch.setdefault("timeshift_url", info.get("timeshift_url", ""))
+                ch.setdefault("fcc_ip", info.get("fcc_ip", ""))
+                ch.setdefault("fcc_port", info.get("fcc_port", ""))
         Storage(cfg, logger).save(channels, epgs)
         logger.info(">>> 1. Storage.save 完成")
 

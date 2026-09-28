@@ -149,6 +149,86 @@ h2 { font-size: 16px; margin: 28px 0 12px; color: var(--text); font-weight: 600;
 .status-ok { color: var(--success); font-weight: 600; }
 .status-no { color: #cbd5e1; }
 
+/* ========== 频道链接列 ========== */
+.url-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 320px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: bottom;
+    cursor: pointer;
+    background: var(--primary-light);
+    color: var(--primary);
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.url-cell:hover { background: var(--primary); color: #fff; }
+.url-empty { color: #cbd5e1; }
+
+/* ========== EPG 分组布局 ========== */
+.epg-layout { display: flex; gap: 16px; align-items: flex-start; }
+.epg-side {
+    flex: 0 0 170px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 10px;
+    position: sticky;
+    top: 84px;
+}
+.epg-side .group-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: 0;
+    border-radius: 7px;
+    padding: 8px 10px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+.epg-side .group-btn:hover { background: #f1f5f9; }
+.epg-side .group-btn.active { background: var(--primary); color: #fff; font-weight: 600; }
+.epg-main { flex: 1; min-width: 0; }
+.epg-channels {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 12px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+.ch-link {
+    border: 1px solid var(--border);
+    background: #fff;
+    border-radius: 7px;
+    padding: 5px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--text);
+}
+.ch-link:hover { border-color: var(--primary); color: var(--primary); }
+.ch-link.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+    font-weight: 600;
+}
+.epg-now { color: var(--primary); font-weight: 700; }
+.epg-time { white-space: nowrap; color: var(--text-secondary); font-size: 13px; }
+
 /* ========== 工具栏 ========== */
 .toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
 .toolbar input, .toolbar select {

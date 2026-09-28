@@ -8,8 +8,7 @@
     <button class="btn btn-primary" onclick="loadChannels(1)">搜索</button>
 </div>
 <table class="table">
-    <thead><tr><th>台号</th><th>频道名</th><th>栏目</th>
-        <th>时移</th><th>回看</th><th>已订</th><th>mediacode</th></tr></thead>
+    <thead><tr><th>台号</th><th>频道名</th><th>RTSP 链接</th><th>RTP 链接</th></tr></thead>
     <tbody id="ch-tbody"></tbody>
 </table>
 <div class="pagination" id="pager"></div>
@@ -18,7 +17,6 @@
 {% block script %}
 <script>
 let curPage = 1;
-let curCat = '';
 
 async function loadCategories() {
     const r = await fetch('/api/channels?page=1&size=500');
@@ -33,22 +31,26 @@ async function loadCategories() {
     });
 }
 
+function urlCell(url) {
+    if (!url) return '<span class="url-empty">-</span>';
+    const esc = url.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return `<span class="url-cell" title="${esc}" onclick="copyText('${esc.replace(/'/g, "\\'")}')">${esc}</span>`;
+}
+
 async function loadChannels(page) {
     curPage = page;
     const kw = document.getElementById('kw').value;
-    curCat = document.getElementById('cat').value;
-    const r = await fetch(`/api/channels?page=${page}&size=50&keyword=${encodeURIComponent(kw)}&category=${encodeURIComponent(curCat)}`);
+    const cat = document.getElementById('cat').value;
+    const r = await fetch(`/api/channels?page=${page}&size=50&keyword=${encodeURIComponent(kw)}&category=${encodeURIComponent(cat)}`);
     const d = await r.json();
     const tbody = document.getElementById('ch-tbody');
     tbody.innerHTML = '';
     d.items.forEach(c => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${c.channelIndex}</td><td>${c.channelName}</td>
-            <td>${c.category || ''}</td>
-            <td class="${c.timeShift ? 'status-ok' : 'status-no'}">${c.timeShift ? '是' : '否'}</td>
-            <td class="${c.isTVOD ? 'status-ok' : 'status-no'}">${c.isTVOD ? '是' : '否'}</td>
-            <td class="${c.hasSubscrib ? 'status-ok' : 'status-no'}">${c.hasSubscrib ? '是' : '否'}</td>
-            <td><code>${c.mediacode || ''}</code></td>`;
+        tr.innerHTML = `<td>${c.channelIndex}</td>
+            <td>${c.channelName}</td>
+            <td>${urlCell(c.rtsp_url)}</td>
+            <td>${urlCell(c.rtp_url)}</td>`;
         tbody.appendChild(tr);
     });
     renderPager(d.total, d.page, d.size);
@@ -57,8 +59,7 @@ async function loadChannels(page) {
 function renderPager(total, page, size) {
     const pages = Math.ceil(total / size);
     const pager = document.getElementById('pager');
-    let html = `共 ${total} 条，${pages} 页 `;
-    pager.innerHTML = html;
+    pager.innerHTML = `共 ${total} 条，${pages} 页 `;
     const start = Math.max(1, page - 4);
     const end = Math.min(pages, start + 9);
     for (let i = start; i <= end; i++) {
