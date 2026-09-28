@@ -1,6 +1,7 @@
 # iptv/epg.py
 import json
 import os
+import shutil
 import time
 from datetime import datetime, timedelta
 from . import constants
@@ -72,8 +73,9 @@ class EPGCollector:
         return (datetime.now() + timedelta(days=offset)).strftime("%Y-%m-%d")
 
     def _cache_path(self, channel_id, offset):
+        """按日期建立文件夹：data/epg_cache/<日期>/<频道ID>.json"""
         return os.path.join(
-            constants.EPG_CACHE_DIR, str(channel_id), f"{self._day_str(offset)}.json")
+            constants.EPG_CACHE_DIR, self._day_str(offset), f"{channel_id}.json")
 
     def _load_cache(self, channel_id, offset):
         """返回 (info, programs)，缓存缺失或损坏时返回 None"""
@@ -94,6 +96,31 @@ class EPGCollector:
                 json.dump([info, programs], f, ensure_ascii=False)
         except OSError as e:
             self.logger.warning(f"写入 EPG 缓存失败: {e}")
+
+    def _prune_cache(self):
+        """
+        过期缓存清理：按日期文件夹分类，只保留历史 EPG_HISTORY_DAYS 天
+        到未来 DATE_SIZE-1 天（即本次采集的完整日期窗口），范围外删除。
+        """
+        try:
+            if not os.path.isdir(constants.EPG_CACHE_DIR):
+                return
+            today = datetime.now().date()
+            min_date = today - timedelta(days=constants.EPG_HISTORY_DAYS)
+            max_date = today + timedelta(days=constants.DATE_SIZE - 1)
+            for name in os.listdir(constants.EPG_CACHE_DIR):
+                path = os.path.join(constants.EPG_CACHE_DIR, name)
+                if not os.path.isdir(path):
+                    continue
+                try:
+                    d = datetime.strptime(name, "%Y-%m-%d").date()
+                except ValueError:
+                    continue
+                if d < min_date or d > max_date:
+                    shutil.rmtree(path, ignore_errors=True)
+                    self.logger.info(f"清理过期 EPG 缓存: {name}")
+        except OSError as e:
+            self.logger.warning(f"清理 EPG 缓存失败: {e}")
 
     def _fetch_days(self, channel_id):
         """
@@ -157,6 +184,9 @@ class EPGCollector:
         self.logger.info(
             f"采集节目单，{total} 频道 × "
             f"{constants.EPG_HISTORY_DAYS} 天历史 + {constants.DATE_SIZE} 天未来")
+
+        # 采集前清理过期缓存，只保留历史 7 天到未来 8 天
+        self._prune_cache()
 
         result = {}
         # 并发数 <=1 或频道数 <=1 时退化为串行（保持原行为）
