@@ -76,7 +76,9 @@ def job():
     try:
         collect()
         logger.info("定时采集完成")
-    except Exception as e:
+    except BaseException as e:
+        # collect() 内部用 sys.exit 终止（SystemExit 是 BaseException），
+        # 若不捕获会导致 scheduler 进程退出、容器重启循环
         logger.error(f"定时采集失败: {e}")
 
 
@@ -113,12 +115,10 @@ def main_loop():
             jobs = _load_jobs()
             if not jobs:
                 continue
-            now = datetime.now()
-            for cron in jobs:
-                t = _next_run(cron, now)
-                if t and t <= now:
-                    job()
-                    break
+            # 用入睡前的目标时间判断是否到点：sleep 可能因调度延迟醒来时已过触发点，
+            # 若重新计算 _next_run 会跳到下一个触发时间，导致本次任务被静默跳过
+            if nr <= datetime.now():
+                job()
             time.sleep(2)
         except Exception as e:
             logger.error(f"调度循环异常: {e}", exc_info=True)
