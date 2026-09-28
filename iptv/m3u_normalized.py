@@ -104,8 +104,10 @@ class NormalizedM3UGenerator:
         try:
             os.makedirs(constants.OUTPUT_DIR, exist_ok=True)
             p = os.path.join(constants.OUTPUT_DIR, "playlist.m3u")
-            with open(p, "w", encoding="utf-8") as f:
+            tmp = p + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
                 f.write(self.build(channels, channel_infos))
+            os.replace(tmp, p)
             self.logger.info(f"保存: {p}")
             return p
         except Exception as e:

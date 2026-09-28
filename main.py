@@ -147,8 +147,8 @@ def collect(allow_crack=True):
         logger.info(">>> 2. XMLTVGenerator.save 完成")
 
         logger.info(">>> 3. M3UGenerator.save 开始")
-        NormalizedM3UGenerator(cfg, logger).save(channels, channel_infos)
-        logger.info(">>> 3. M3UGenerator.save 完成")
+        p = NormalizedM3UGenerator(cfg, logger).save(channels, channel_infos)
+        logger.info(f">>> 3. M3UGenerator.save {'完成' if p else '失败'}")
 
         logger.info("=" * 60)
         logger.info("采集完成")
