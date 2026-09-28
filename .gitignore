@@ -4,3 +4,5 @@ config.yaml
 config.yaml.bak.*
 .env
 .monkeycode/
+log/
+output/
