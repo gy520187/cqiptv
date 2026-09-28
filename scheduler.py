@@ -31,6 +31,14 @@ def _load_jobs():
     return jobs
 
 
+def _hot_reload_enabled():
+    """配置热更新开关：scheduler_hot_reload 设为 false 时仅启动时读取配置"""
+    raw = cfg.get("scheduler_hot_reload", None)
+    if raw is None:
+        return constants.SCHEDULER_HOT_RELOAD
+    return str(raw).lower() in ("1", "true", "yes", "on")
+
+
 def _next_run(cron, now=None):
     try:
         trigger = CronTrigger.from_crontab(cron)
@@ -58,8 +66,10 @@ def job():
 
 
 def main_loop():
+    hot_reload = _hot_reload_enabled()
     while True:
-        cfg.load()
+        if hot_reload:
+            cfg.load()
         jobs = _load_jobs()
         if not jobs:
             time.sleep(60)
@@ -79,7 +89,8 @@ def main_loop():
             time.sleep(60)
             continue
         time.sleep(max(delta, 1))
-        cfg.load()
+        if hot_reload:
+            cfg.load()
         jobs = _load_jobs()
         if not jobs:
             continue

@@ -202,6 +202,13 @@ class WebAPI:
         cron = self.cfg.get("scheduler_cron", "") or constants.SCHEDULER_CRON
         return [{"enabled": enabled, "cron": cron}]
 
+    def _hot_reload_enabled(self):
+        """配置热更新开关：scheduler_hot_reload 为 false 时，scheduler 仅在启动时读取配置"""
+        raw = self.cfg.get("scheduler_hot_reload", None)
+        if raw is None:
+            return constants.SCHEDULER_HOT_RELOAD
+        return str(raw).lower() in ("1", "true", "yes", "on")
+
     def get_scheduler_config(self):
         jobs = []
         for j in self._load_jobs_raw():
@@ -215,6 +222,7 @@ class WebAPI:
             "jobs": jobs,
             "default_cron": constants.SCHEDULER_CRON,
             "default_enabled": constants.SCHEDULER_ENABLED,
+            "hot_reload": self._hot_reload_enabled(),
         }
 
     def save_scheduler_config(self, data):
@@ -235,6 +243,9 @@ class WebAPI:
                 except Exception as e:
                     return False, f"cron 表达式无效: {cron}（{e}）"
                 clean.append({"enabled": bool(j.get("enabled")), "cron": cron})
+            hot_reload = data.get("hot_reload")
+            if hot_reload is not None:
+                self.cfg.set("scheduler_hot_reload", bool(hot_reload))
             if not clean:
                 clean = [{"enabled": constants.SCHEDULER_ENABLED,
                           "cron": constants.SCHEDULER_CRON}]
