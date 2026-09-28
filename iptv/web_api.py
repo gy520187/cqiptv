@@ -29,9 +29,19 @@ class WebAPI:
         files.sort(key=lambda x: x["mtime"], reverse=True)
         channels = self._load_json("channels.json") or []
         epgs = self._load_json("epg.json") or {}
+        dates = set()
+        for cid, epg in (epgs or {}).items():
+            if not isinstance(epg, dict):
+                continue
+            for page in epg.get("programs", []):
+                for p in page or []:
+                    t = (p or {}).get("beginTimeFormat", "")
+                    if len(t) >= 8:
+                        dates.add(t[:8])
         return {
             "channels": len(channels),
             "epg_channels": len(epgs),
+            "epg_days": len(dates),
             "key": self.cfg.key or "（未破解）",
             "files": files,
             "collecting": not self._collect_progress["done"],
@@ -48,10 +58,12 @@ class WebAPI:
         except Exception:
             return None
 
-    def get_channels(self, page=1, size=50, keyword=""):
+    def get_channels(self, page=1, size=50, keyword="", category=""):
         channels = self._load_json("channels.json") or []
         if keyword:
             channels = [c for c in channels if keyword in c.get("channelName", "")]
+        if category:
+            channels = [c for c in channels if category == c.get("category", "")]
         total = len(channels)
         start = (page - 1) * size
         return {"total": total, "page": page, "size": size,

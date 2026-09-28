@@ -3,21 +3,39 @@
 {% block content %}
 <h1>日志</h1>
 <div class="toolbar">
-    <input id="lines" type="number" value="200">
-    <button onclick="loadLogs()">刷新</button>
+    <input id="lines" type="number" value="300" style="max-width:120px">
+    <button class="btn btn-default" onclick="loadLogs()">刷新</button>
+    <label style="display:flex;align-items:center;gap:6px;color:var(--text-secondary);font-size:13px">
+        <input type="checkbox" id="auto" checked onchange="toggleAuto()"> 自动刷新
+    </label>
 </div>
 <pre id="log-content" class="log-content"></pre>
 {% endblock %}
 
 {% block script %}
 <script>
+let autoTimer = null;
+
+function toggleAuto() {
+    if (document.getElementById('auto').checked) {
+        autoTimer = setInterval(loadLogs, 5000);
+    } else if (autoTimer) {
+        clearInterval(autoTimer);
+        autoTimer = null;
+    }
+}
+
 async function loadLogs() {
     const lines = document.getElementById('lines').value;
     const r = await fetch('/api/logs?lines=' + lines);
     const d = await r.json();
-    document.getElementById('log-content').textContent = d.join('\n');
+    const el = document.getElementById('log-content');
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 30;
+    el.textContent = d.join('\n');
+    if (atBottom) el.scrollTop = el.scrollHeight;
 }
+
 loadLogs();
-setInterval(loadLogs, 5000);
+toggleAuto();
 </script>
 {% endblock %}

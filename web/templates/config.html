@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block title %}配置{% endblock %}
 {% block content %}
-<h1>⚙️ 配置管理</h1>
+<h1>配置管理</h1>
 <div class="toolbar">
-    <button onclick="loadConfig()">🔄 刷新</button>
-    <button onclick="saveConfig()" class="btn-primary">💾 保存</button>
-    <button onclick="testConfig()">🔌 测试连接</button>
+    <button class="btn btn-default" onclick="loadConfig()">刷新</button>
+    <button class="btn btn-primary" onclick="saveConfig()">保存</button>
+    <button class="btn btn-default" onclick="testConfig()">测试连接</button>
 </div>
 <pre id="config-editor" class="config-editor" contenteditable="true"></pre>
 {% endblock %}
@@ -33,7 +33,7 @@ async function saveConfig() {
 async function testConfig() {
     const r = await fetch('/api/config/test', {method: 'POST'});
     const d = await r.json();
-    toast(d.ok ? '✅ ' + d.msg : '❌ ' + d.msg);
+    toast(d.ok ? '连接成功: ' + d.msg : '连接失败: ' + d.msg);
 }
 loadConfig();
 </script>

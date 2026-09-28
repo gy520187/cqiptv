@@ -88,7 +88,8 @@ def api_channels():
     page = int(request.args.get("page", 1))
     size = int(request.args.get("size", 50))
     keyword = request.args.get("keyword", "")
-    return jsonify(api.get_channels(page, size, keyword))
+    category = request.args.get("category", "")
+    return jsonify(api.get_channels(page, size, keyword, category))
 
 
 @app.route("/api/epg")

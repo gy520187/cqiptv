@@ -3,15 +3,15 @@
 {% block content %}
 <h1>密钥破解</h1>
 <div class="form">
-    <label>起始：<input id="start" type="number" value="0"></label>
-    <label>结束：<input id="end" type="number" value="100000000"></label>
-    <label>进程：<input id="workers" type="number" value="8"></label>
-    <button onclick="startCrack()">开始破解</button>
+    <label>起始<input id="start" type="number" value="0"></label>
+    <label>结束<input id="end" type="number" value="100000000"></label>
+    <label>进程<input id="workers" type="number" value="8"></label>
+    <button class="btn btn-danger" onclick="startCrack()">开始破解</button>
 </div>
 <div class="progress">
-    <div id="crack-msg">就绪</div>
+    <div class="progress-msg" id="crack-msg">就绪</div>
     <div class="progress-bar"><div id="crack-bar"></div></div>
-    <pre id="crack-found"></pre>
+    <pre id="crack-found" class="crack-found"></pre>
 </div>
 <h2>当前密钥</h2>
 <div id="cur-key" class="key-box">-</div>

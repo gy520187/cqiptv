@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}EPG{% endblock %}
+{% block content %}
+<h1>EPG 节目单</h1>
+<div class="toolbar">
+    <select id="ch-select"><option value="">选择频道...</option></select>
+    <button class="btn btn-primary" onclick="loadEpg()">查看</button>
+</div>
+<div class="table epg-list">
+    <table class="table">
+        <thead><tr><th>开始时间</th><th>结束时间</th><th>节目</th></tr></thead>
+        <tbody id="epg-tbody"><tr><td colspan="3" style="color:var(--text-secondary)">请选择频道</td></tr></tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+let epgData = [];
+
+async function loadChannels() {
+    const r = await fetch('/api/channels?page=1&size=500');
+    const d = await r.json();
+    const sel = document.getElementById('ch-select');
+    d.items.sort((a, b) => (a.channelIndex || 0) - (b.channelIndex || 0)).forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.channelID;
+        opt.textContent = `${c.channelIndex}. ${c.channelName}`;
+        sel.appendChild(opt);
+    });
+}
+
+function fmt14(s) {
+    if (!s || s.length < 12) return s || '-';
+    return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)} ${s.slice(8, 10)}:${s.slice(10, 12)}`;
+}
+
+function renderEpg() {
+    const tbody = document.getElementById('epg-tbody');
+    if (!epgData.length) {
+        tbody.innerHTML = '<tr><td colspan="3" style="color:var(--text-secondary)">该频道暂无节目单</td></tr>';
+        return;
+    }
+    const now = new Date();
+    const nowStr = now.getFullYear() * 100000000 +
+        (now.getMonth() + 1) * 1000000 + now.getDate() * 10000 +
+        now.getHours() * 100 + now.getMinutes();
+    tbody.innerHTML = '';
+    epgData.forEach(p => {
+        const tr = document.createElement('tr');
+        const cls = nowStr >= +(p.beginTimeFormat || 0) && nowStr < +(p.endTimeFormat || 0)
+            ? 'epg-now' : '';
+        tr.innerHTML = `<td class="epg-time">${fmt14(p.beginTimeFormat)}</td>
+            <td class="epg-time">${fmt14(p.endTimeFormat)}</td>
+            <td class="${cls}">${p.programName || ''}</td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+async function loadEpg() {
+    const cid = document.getElementById('ch-select').value;
+    if (!cid) return;
+    const r = await fetch('/api/epg?channel_id=' + encodeURIComponent(cid));
+    const d = await r.json();
+    epgData = [];
+    (d.programs || []).forEach(page => {
+        (page || []).forEach(p => { if (p) epgData.push(p); });
+    });
+    renderEpg();
+}
+
+document.getElementById('ch-select').onchange = loadEpg;
+loadChannels();
+</script>
+{% endblock %}
