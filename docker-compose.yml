@@ -14,6 +14,7 @@ x-iptv-env: &iptv-env
   TZ: Asia/Shanghai
   ICON_HOST: ${ICON_HOST:-http://your-server:6060}   # 播放器可达的图标地址
   EPG_URL: ${EPG_URL:-}                              # M3U 头部 x-tvg-url
+  EPG_WORKERS: ${EPG_WORKERS:-4}                     # EPG 并行采集线程数（0/1=串行）
 
 x-iptv-common: &iptv-common
   restart: unless-stopped

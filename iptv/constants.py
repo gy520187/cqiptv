@@ -26,6 +26,8 @@ INTERVAL = 0.1
 TIMEOUT = 10
 RETRY = 3
 MAX_CHANNELS = 0
+# EPG 并发采集线程数（环境变量可覆盖，0/1 表示串行）
+EPG_WORKERS = int(os.getenv("EPG_WORKERS") or "4")
 
 # ========== 模板/用户组（与原始抓包对齐） ==========
 TEMPLATE_NAME = "meilixinnongcunhangyebanitvfenzu"

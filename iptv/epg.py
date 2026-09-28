@@ -120,15 +120,40 @@ class EPGCollector:
         self.logger.info(
             f"采集节目单，{total} 频道 × "
             f"{constants.EPG_HISTORY_DAYS} 天历史 + {constants.DATE_SIZE} 天未来")
+
         result = {}
-        for i, ch in enumerate(channels[:total]):
-            cid = ch["channelID"]
-            self.logger.info(f"  [{i+1}/{total}] {ch['channelName']}")
-            alt_ids = alt_ids_for(ch, alias_map)
-            epg = self.fetch(cid, alt_ids)
-            n_days = len(epg["programs"])
-            n_progs = sum(len(d) for d in epg["programs"])
-            self.logger.info(f"    {n_days} 天 / {n_progs} 条节目")
-            result[cid] = epg
-            time.sleep(constants.INTERVAL)
+        # 并发数 <=1 或频道数 <=1 时退化为串行（保持原行为）
+        workers = constants.EPG_WORKERS
+        if workers <= 1 or total <= 1:
+            for i, ch in enumerate(channels[:total]):
+                cid = ch["channelID"]
+                self.logger.info(f"  [{i+1}/{total}] {ch['channelName']}")
+                epg = self.fetch(cid, alt_ids_for(ch, alias_map))
+                n_days = len(epg["programs"])
+                n_progs = sum(len(d) for d in epg["programs"])
+                self.logger.info(f"    {n_days} 天 / {n_progs} 条节目")
+                result[cid] = epg
+                time.sleep(constants.INTERVAL)
+            return result
+
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        futures = {}
+        with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="epg") as pool:
+            for i, ch in enumerate(channels[:total]):
+                cid = ch["channelID"]
+                self.logger.info(f"  [{i+1}/{total}] {ch['channelName']}")
+                futures[pool.submit(self.fetch, cid, alt_ids_for(ch, alias_map))] = (cid, ch)
+            done = 0
+            for fut in as_completed(futures):
+                cid, ch = futures[fut]
+                done += 1
+                try:
+                    epg = fut.result()
+                    n_days = len(epg["programs"])
+                    n_progs = sum(len(d) for d in epg["programs"])
+                    self.logger.info(f"    [{done}/{total}] {ch['channelName']}: {n_days} 天 / {n_progs} 条节目")
+                    result[cid] = epg
+                except Exception as e:
+                    self.logger.error(f"    [{done}/{total}] {ch['channelName']} 采集失败: {e}")
         return result
