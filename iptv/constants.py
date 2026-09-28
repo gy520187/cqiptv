@@ -28,6 +28,8 @@ RETRY = 3
 MAX_CHANNELS = 0
 # EPG 并发采集线程数（环境变量可覆盖，0/1 表示串行）
 EPG_WORKERS = int(os.getenv("EPG_WORKERS") or "4")
+# EPG 按天缓存目录：每频道每天一个文件，增量采集时先检查本地缓存，避免重复请求
+EPG_CACHE_DIR = "data/epg_cache"
 
 # ========== 模板/用户组（与原始抓包对齐） ==========
 TEMPLATE_NAME = "meilixinnongcunhangyebanitvfenzu"

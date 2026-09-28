@@ -6,3 +6,4 @@ config.yaml.bak.*
 .monkeycode/
 log/
 output/
+data/epg_cache/

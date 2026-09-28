@@ -1,6 +1,8 @@
 # iptv/epg.py
 import json
+import os
 import time
+from datetime import datetime, timedelta
 from . import constants
 from .channel import is_4k_name, base_channel_name
 from .utils import normalize_channel_name
@@ -65,9 +67,39 @@ class EPGCollector:
         ]
         return data[0], programs
 
+    def _day_str(self, offset):
+        """dateIndex 偏移对应的实际日期（用于按天缓存文件名）"""
+        return (datetime.now() + timedelta(days=offset)).strftime("%Y-%m-%d")
+
+    def _cache_path(self, channel_id, offset):
+        return os.path.join(
+            constants.EPG_CACHE_DIR, str(channel_id), f"{self._day_str(offset)}.json")
+
+    def _load_cache(self, channel_id, offset):
+        """返回 (info, programs)，缓存缺失或损坏时返回 None"""
+        path = self._cache_path(channel_id, offset)
+        if not os.path.exists(path):
+            return None
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return None
+
+    def _save_cache(self, channel_id, offset, info, programs):
+        path = self._cache_path(channel_id, offset)
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump([info, programs], f, ensure_ascii=False)
+        except OSError as e:
+            self.logger.warning(f"写入 EPG 缓存失败: {e}")
+
     def _fetch_days(self, channel_id):
         """
         逐天拉取一个频道 ID 的全部节目，按 (起止,标题) 去重。
+        每拉取一天立即落盘为单文件；后续更新时先检查本地缓存，
+        命中则跳过网络请求，仅拉取缺失的天数。
         dateIndex 范围 -EPG_HISTORY_DAYS..DATE_SIZE-1：负数取历史节目
         （供播放器 catchup 回看定位），0 起为未来节目。
         """
@@ -75,7 +107,13 @@ class EPGCollector:
         days = []
         seen = set()
         for day in range(-constants.EPG_HISTORY_DAYS, constants.DATE_SIZE):
-            info, programs = self._fetch_day(channel_id, day)
+            cached = self._load_cache(channel_id, day)
+            if cached is not None:
+                info, programs = cached
+            else:
+                info, programs = self._fetch_day(channel_id, day)
+                self._save_cache(channel_id, day, info, programs)
+                time.sleep(constants.INTERVAL)
             if info and not dates:
                 dates = info.get("data", []) or []
             fresh = []
@@ -87,7 +125,6 @@ class EPGCollector:
                 fresh.append(p)
             if fresh:
                 days.append(fresh)
-            time.sleep(constants.INTERVAL)
         return dates, days
 
     def fetch(self, channel_id, alt_ids=None):
