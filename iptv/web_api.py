@@ -191,35 +191,67 @@ class WebAPI:
     def get_crack_progress(self):
         return self._crack_progress
 
-    def get_scheduler_config(self):
+    def _load_jobs_raw(self):
+        """读取定时任务列表；兼容旧版单任务字段 scheduler_enabled/scheduler_cron"""
+        raw = self.cfg.get("scheduler_jobs", None)
+        if isinstance(raw, list) and raw:
+            return [j for j in raw if isinstance(j, dict)]
         enabled_raw = self.cfg.get("scheduler_enabled", "")
         enabled = (str(enabled_raw).lower() in ("1", "true", "yes", "on")
                    if enabled_raw != "" else constants.SCHEDULER_ENABLED)
         cron = self.cfg.get("scheduler_cron", "") or constants.SCHEDULER_CRON
-        nr = self._next_run(cron)
+        return [{"enabled": enabled, "cron": cron}]
+
+    def get_scheduler_config(self):
+        jobs = []
+        for j in self._load_jobs_raw():
+            cron = str(j.get("cron", "") or "").strip() or constants.SCHEDULER_CRON
+            jobs.append({
+                "enabled": bool(j.get("enabled")),
+                "cron": cron,
+                "next_run": self._next_run_str(cron),
+            })
         return {
-            "enabled": enabled,
-            "cron": cron,
-            "default_enabled": constants.SCHEDULER_ENABLED,
+            "jobs": jobs,
             "default_cron": constants.SCHEDULER_CRON,
-            "next_run": nr.strftime("%Y-%m-%d %H:%M:%S") if nr else None,
+            "default_enabled": constants.SCHEDULER_ENABLED,
         }
 
     def save_scheduler_config(self, data):
         try:
             from apscheduler.triggers.cron import CronTrigger
-            cron = str(data.get("cron", "")).strip() or constants.SCHEDULER_CRON
-            try:
-                CronTrigger.from_crontab(cron)
-            except Exception as e:
-                return False, f"cron 表达式无效: {e}"
-            enabled = bool(data.get("enabled"))
-            self.cfg.set("scheduler_enabled", enabled)
-            self.cfg.set("scheduler_cron", cron)
+            jobs = data.get("jobs")
+            if not isinstance(jobs, list):
+                return False, "jobs 必须是列表"
+            clean = []
+            for j in jobs:
+                if not isinstance(j, dict):
+                    continue
+                cron = str(j.get("cron", "") or "").strip()
+                if not cron:
+                    continue
+                try:
+                    CronTrigger.from_crontab(cron)
+                except Exception as e:
+                    return False, f"cron 表达式无效: {cron}（{e}）"
+                clean.append({"enabled": bool(j.get("enabled")), "cron": cron})
+            if not clean:
+                clean = [{"enabled": constants.SCHEDULER_ENABLED,
+                          "cron": constants.SCHEDULER_CRON}]
+                self.cfg.set("scheduler_jobs", clean)
+                # 迁移后清理旧版单任务字段，避免歧义
+                self.cfg.raw.pop("scheduler_enabled", None)
+                self.cfg.raw.pop("scheduler_cron", None)
+                self.cfg.save()
+                self.logger.info(f"定时任务列表为空，已重置为默认任务: {constants.SCHEDULER_CRON}")
+                return True, f"未配置定时任务，已使用默认值 {constants.SCHEDULER_CRON}（每天 04:00）"
+            self.cfg.set("scheduler_jobs", clean)
+            # 迁移后清理旧版单任务字段，避免歧义
+            self.cfg.raw.pop("scheduler_enabled", None)
+            self.cfg.raw.pop("scheduler_cron", None)
             self.cfg.save()
-            self.logger.info(f"定时任务配置已保存: enabled={enabled}, cron={cron}")
-            nr = self._next_run(cron)
-            return True, (nr.strftime("%Y-%m-%d %H:%M:%S") if nr else "无法计算下次运行时间")
+            self.logger.info(f"定时任务配置已保存: {len(clean)} 个任务 {clean}")
+            return True, f"已保存 {len(clean)} 个定时任务"
         except Exception as e:
             self.logger.error(f"保存定时任务配置失败: {e}")
             return False, str(e)
@@ -233,6 +265,11 @@ class WebAPI:
             return trigger.get_next_fire_time(None, datetime.now())
         except Exception:
             return None
+
+    @classmethod
+    def _next_run_str(cls, cron):
+        nr = cls._next_run(cron)
+        return nr.strftime("%Y-%m-%d %H:%M:%S") if nr else None
 
     def get_logs(self, lines=200):
         path = os.path.join(constants.LOG_DIR, constants.LOG_FILE)
