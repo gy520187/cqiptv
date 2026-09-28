@@ -15,6 +15,7 @@ def clean_channel_name(name: str) -> str:
 def normalize_channel_name(name: str) -> str:
     """归一化频道名（分组/图标/M3U 用）"""
     n = clean_channel_name(name)
+    n = n.replace("＋", "+")
     n = re.sub(r"[（(]高清[)）]", "", n)
     n = re.sub(r"HD$", "", n, flags=re.IGNORECASE)
     n = re.sub(r"[（(]超高清[)）]", "", n)
