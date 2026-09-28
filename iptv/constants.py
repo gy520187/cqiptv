@@ -48,6 +48,10 @@ ICON_HOST = os.getenv("ICON_HOST", "http://your-server:6060")   # M3U 引用的�
 EPG_URL = os.getenv("EPG_URL") or f"{ICON_HOST}/epg.xml.gz"     # M3U 头部 x-tvg-url 指向的节目单地址，留空默认 ICON_HOST/epg.xml.gz（gzip 版体积约为 xml 的 1/10）
 ICON_FORCE = False
 
+# 外部 EPG 补充源：仅用于运营商无节目数据的频道（运营商数据优先），留空禁用
+EXTERNAL_EPG_URL = os.getenv("EXTERNAL_EPG_URL", "http://epg.51zmt.top:8000/e.xml.gz")
+EXTERNAL_EPG_TIMEOUT = 60  # 下载外部 EPG 超时（秒）
+
 # ========== 输出 ==========
 OUTPUT_DIR = "output"
 OUTPUT_FORMAT = "both"
