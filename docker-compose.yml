@@ -37,7 +37,7 @@ services:
     container_name: iptv-web
     <<: *iptv-common
     ports:
-      # 宿主机与容器端口一致（默认 6060，避开浏览器禁用的 6000），可通过 .env 的 WEB_PORT 修改宿主机侧
+      # 宿主机与容器端口一致（默认 6060），可通过 .env 的 WEB_PORT 修改宿主机侧
       - "${WEB_PORT:-6060}:6060"
     volumes: *iptv-volumes
     environment:
