@@ -35,7 +35,11 @@ def _load_jobs():
 def _next_run(cron, now=None):
     try:
         trigger = CronTrigger.from_crontab(cron)
-        return trigger.get_next_fire_time(None, now or datetime.now())
+        start = now if now is not None else datetime.now()
+        # APScheduler 期望 aware datetime；统一转本地时区，返回时再转为 naive 本地时间
+        start_aware = start.astimezone() if start.tzinfo is None else start
+        nr = trigger.get_next_fire_time(None, start_aware)
+        return nr.replace(tzinfo=None) if nr else None
     except Exception:
         return None
 
@@ -50,15 +54,21 @@ def _next_run_multi(jobs, now=None):
 
 
 def _maybe_reload():
-    """Web 保存定时任务配置后写入标记文件，检测到则重新加载配置"""
+    """Web 保存定时任务配置后写入标记文件，检测到则重新加载配置。
+    任何异常都不能导致进程退出：加载失败也删除标记，避免容器重启循环。"""
     flag = constants.SCHEDULER_RELOAD_FLAG
+    if not os.path.exists(flag):
+        return
     try:
-        if os.path.exists(flag):
-            cfg.load()
+        cfg.load()
+        logger.info("检测到定时任务配置已更新，已重新加载")
+    except Exception as e:
+        logger.error(f"重新加载定时任务配置失败: {e}")
+    finally:
+        try:
             os.remove(flag)
-            logger.info("检测到定时任务配置已更新，已重新加载")
-    except OSError as e:
-        logger.error(f"检查配置更新标记失败: {e}")
+        except OSError:
+            pass
 
 
 def job():
@@ -74,37 +84,41 @@ def main_loop():
     cfg.load()
     logger.info("定时任务启动（多任务循环调度，保存配置后自动重新加载）")
     while True:
-        _maybe_reload()
-        jobs = _load_jobs()
-        if not jobs:
+        try:
+            _maybe_reload()
+            jobs = _load_jobs()
+            if not jobs:
+                time.sleep(5)
+                continue
+            nr = _next_run_multi(jobs)
+            if nr is None:
+                logger.error(f"定时任务 cron 均无效: {jobs}")
+                time.sleep(60)
+                continue
+            for cron in jobs:
+                t = _next_run(cron)
+                if t:
+                    logger.info(f"  任务 cron={cron} 下次运行 {t.strftime('%Y-%m-%d %H:%M:%S')}")
+            delta = (nr - datetime.now()).total_seconds()
+            logger.info(f"最近触发: {nr.strftime('%Y-%m-%d %H:%M:%S')}（{delta:.0f} 秒后）")
+            if delta > 60:
+                time.sleep(5)
+                continue
+            time.sleep(max(delta, 1))
+            _maybe_reload()
+            jobs = _load_jobs()
+            if not jobs:
+                continue
+            now = datetime.now()
+            for cron in jobs:
+                t = _next_run(cron, now)
+                if t and t <= now:
+                    job()
+                    break
+            time.sleep(2)
+        except Exception as e:
+            logger.error(f"调度循环异常: {e}", exc_info=True)
             time.sleep(5)
-            continue
-        nr = _next_run_multi(jobs)
-        if nr is None:
-            logger.error(f"定时任务 cron 均无效: {jobs}")
-            time.sleep(60)
-            continue
-        for cron in jobs:
-            t = _next_run(cron)
-            if t:
-                logger.info(f"  任务 cron={cron} 下次运行 {t.strftime('%Y-%m-%d %H:%M:%S')}")
-        delta = (nr - datetime.now()).total_seconds()
-        logger.info(f"最近触发: {nr.strftime('%Y-%m-%d %H:%M:%S')}（{delta:.0f} 秒后）")
-        if delta > 60:
-            time.sleep(5)
-            continue
-        time.sleep(max(delta, 1))
-        _maybe_reload()
-        jobs = _load_jobs()
-        if not jobs:
-            continue
-        now = datetime.now()
-        for cron in jobs:
-            t = _next_run(cron, now)
-            if t and t <= now:
-                job()
-                break
-        time.sleep(2)
 
 
 if __name__ == "__main__":

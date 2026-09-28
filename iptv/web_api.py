@@ -273,7 +273,9 @@ class WebAPI:
             from datetime import datetime
             from apscheduler.triggers.cron import CronTrigger
             trigger = CronTrigger.from_crontab(cron)
-            return trigger.get_next_fire_time(None, datetime.now())
+            start = datetime.now().astimezone()
+            nr = trigger.get_next_fire_time(None, start)
+            return nr.replace(tzinfo=None) if nr else None
         except Exception:
             return None
 
