@@ -33,17 +33,17 @@
 
 ## 部署前准备：抓包参数
 
-在机顶盒抓包中查找以下字段，填入 `config.yaml`：
+在机顶盒抓包中查找以下字段，填入 `config.yaml`。下表示例均为**虚拟占位值**，请替换为抓包获取的真实参数：
 
-| 字段 | 说明 | 示例 |
+| 字段 | 说明 | 示例（虚拟） |
 |------|------|------|
-| `AuthenticationIP` | 认证服务器地址 | `http://172.23.88.159:33200/EPG/jsp` |
-| `UserID` | 用户账号 | `i5207379189@itv` |
-| `mac` | MAC 地址 | `28:A6:DB:6F:D2:9E` |
-| `STBID` | 机顶盒序列号 | `0010049900608930173628A6DB6FD29E` |
-| `STBType` | 机顶盒型号 | `EC6108V9U_pub_cqydx` |
-| `STBVersion` | 机顶盒版本 | `HWV215011P0000` |
-| `SoftwareVersion` | 软件版本 | `19.2.0-LCQD15.B011` |
+| `AuthenticationIP` | 认证服务器地址 | `http://192.0.2.10:33200/EPG/jsp` |
+| `UserID` | 用户账号 | `1234567890@itv` |
+| `mac` | MAC 地址 | `AA:BB:CC:DD:EE:FF` |
+| `STBID` | 机顶盒序列号 | `00000000000000000000000000000000` |
+| `STBType` | 机顶盒型号 | `ExampleBox_pub_cqydx` |
+| `STBVersion` | 机顶盒版本 | `V0000000P0000` |
+| `SoftwareVersion` | 软件版本 | `1.0.0-EXAMPLE.B001` |
 | `Authenticator` | 抓包获取的硬件签名（十六进制） | 见抓包 |
 | `key` | 3DES 密钥（破解成功后自动回写） | 留空即可 |
 

@@ -58,7 +58,7 @@ class Authenticator:
             return None
 
         # 认证入口（从配置读，可能带 /EPG/jsp）
-        auth_ip = self.cfg.auth_ip or "http://172.23.88.159:33200"
+        auth_ip = self.cfg.auth_ip or "http://192.0.2.10:33200"
         if not auth_ip.startswith("http"):
             auth_ip = f"http://{auth_ip}"
 

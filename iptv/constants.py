@@ -7,7 +7,7 @@
 import os
 
 # ========== 服务器地址 ==========
-DEFAULT_EPG_BASE = "http://172.23.88.159:33200/EPG/jsp"
+DEFAULT_EPG_BASE = "http://192.0.2.10:33200/EPG/jsp"
 AUTH_PUBLIC = "http://epg.itv.cq.cn:8080/EDS/jsp/AuthenticationURL"
 
 # ========== 路径 ==========

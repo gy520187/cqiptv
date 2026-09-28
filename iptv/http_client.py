@@ -19,7 +19,7 @@ class HttpClient:
 
     def url(self, path):
         base = self.cfg.auth_ip or constants.DEFAULT_EPG_BASE
-        # 如果 auth_ip 是 http://172.23.88.159:33200/EPG/jsp，会拼成 .../EPG/jsp/xxx
+        # 如果 auth_ip 是 http://192.0.2.10:33200/EPG/jsp，会拼成 .../EPG/jsp/xxx
         return base.rstrip("/") + path
 
     def get(self, path, params=None, referer="", full_url=False):
