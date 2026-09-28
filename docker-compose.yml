@@ -9,8 +9,7 @@ services:
       - "${WEB_PORT:-6060}:6060"
     volumes:
       # 持久化数据
-      # 注意: config.yaml 必须在宿主机上预先存在（cp config.example.yaml config.yaml），
-      # 否则 Docker 会把挂载点创建成目录导致容器启动失败
+      # 首次运行请先执行 bash init.sh 自动生成 config.yaml（否则 Docker 会把挂载点创建成目录导致启动失败）
       - ./config.yaml:/app/config.yaml
       - ./data:/app/data
       - ./output:/app/output
@@ -38,7 +37,7 @@ services:
     container_name: iptv-scheduler
     restart: unless-stopped
     volumes:
-      # 同上: config.yaml 必须在宿主机上预先存在
+      # 首次运行请先执行 bash init.sh 自动生成 config.yaml
       - ./config.yaml:/app/config.yaml
       - ./data:/app/data
       - ./output:/app/output

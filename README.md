@@ -52,9 +52,8 @@
 ### Docker 部署（推荐）
 
 ```bash
-# 1. 准备配置
-cp config.example.yaml config.yaml
-cp .env.example .env
+# 1. 一键初始化：自动检测并生成 .env 与 config.yaml，创建数据目录
+bash init.sh
 
 # 2. 编辑 .env，把 ICON_HOST 改成播放器可达的地址（如局域网 IP）
 #    vim .env
@@ -62,25 +61,32 @@ cp .env.example .env
 # 3. 编辑 config.yaml，填入抓包获取的认证参数
 #    vim config.yaml
 
-# 4. 创建数据目录并设置权限（容器以 uid 1000 运行）
-mkdir -p data output log
-chown -R 1000:1000 config.yaml data output log
-
-# 5. 启动
+# 4. 启动
 docker compose up -d --build
 ```
 
-`config.yaml` 必须预先存在，否则 Docker 会把挂载点创建成目录导致容器启动失败。
+`init.sh` 会检测项目根目录是否存在 `.env` 和 `config.yaml`，不存在时自动从 `.env.example` / `config.example.yaml` 复制生成，并创建 `data/ output/ log/` 目录、设置容器所需权限（uid 1000）。手动方式见下：
+
+```bash
+cp config.example.yaml config.yaml
+cp .env.example .env
+mkdir -p data output log
+chown -R 1000:1000 config.yaml data output log
+docker compose up -d --build
+```
+
+`config.yaml` 必须预先存在，否则 Docker 会把挂载点创建成目录导致容器启动失败（`init.sh` 已避免此问题）。
 
 ### 本地运行
 
 ```bash
 pip install -r requirements.txt
-cp config.example.yaml config.yaml   # 填入抓包参数
 python server.py        # Web 界面: http://localhost:6060
 python main.py          # 命令行采集（一次性）
 python scheduler.py    # 定时采集
 ```
+
+首次运行会自动生成 `config.yaml`（从 `config.example.yaml` 复制，若不存在模板则创建默认配置），然后在 Web 配置页填入抓包参数即可。`.env` 仅在 Docker Compose 部署时使用，本地运行不需要。
 
 ## Web 界面使用
 
@@ -118,6 +124,7 @@ EPG:  http://<服务器IP>:6060/epg.xml.gz
 ## 目录结构
 
 ```
+init.sh             # 首次运行初始化：自动生成 .env / config.yaml、数据目录与权限
 config.yaml          # 认证配置（含敏感信息，勿提交/外传）
 config.example.yaml # 配置模板
 .env.example        # Docker Compose 环境变量模板

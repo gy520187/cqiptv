@@ -6,7 +6,8 @@ APP_ROOT="${APP_ROOT:-/app}"
 # 陷阱 1: 宿主机缺少 config.yaml 时，Docker 会把挂载点创建成目录
 if [ -d "$APP_ROOT/config.yaml" ]; then
     echo "[entrypoint] 错误: $APP_ROOT/config.yaml 是目录，说明宿主机上缺少该文件" >&2
-    echo "[entrypoint] 请在宿主机项目目录执行: cp config.example.yaml config.yaml" >&2
+    echo "[entrypoint] 请先在宿主机项目目录执行: bash init.sh（会自动生成 config.yaml）" >&2
+    echo "[entrypoint] 若已生成过，可手动执行: cp config.example.yaml config.yaml" >&2
     exit 1
 fi
 
