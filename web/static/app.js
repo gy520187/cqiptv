@@ -7,6 +7,27 @@ function toast(msg, ms = 2200) {
     el._t = setTimeout(() => el.classList.remove('show'), ms);
 }
 
+async function copyText(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+        toast('已复制');
+    } catch (e) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+            document.execCommand('copy');
+            toast('已复制');
+        } catch (e2) {
+            toast('复制失败');
+        }
+        ta.remove();
+    }
+}
+
 function fmtSize(n) {
     if (n < 1024) return n + ' B';
     if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';

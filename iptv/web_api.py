@@ -3,6 +3,10 @@ import os
 import json
 import threading
 from . import constants
+from .utils import categorize_channel
+
+# 总览页仅展示这三个数据文件
+STATUS_FILES = {"playlist.m3u", "epg.xml", "epg.xml.gz"}
 
 
 class WebAPI:
@@ -23,6 +27,8 @@ class WebAPI:
         files = []
         if os.path.exists(out_dir):
             for f in os.listdir(out_dir):
+                if f not in STATUS_FILES:
+                    continue
                 p = os.path.join(out_dir, f)
                 files.append({"name": f, "size": os.path.getsize(p),
                               "mtime": os.path.getmtime(p)})
@@ -58,16 +64,33 @@ class WebAPI:
         except Exception:
             return None
 
+    def _build_rtp_url(self, ch):
+        url = (ch.get("channel_url") or "").replace("igmp://", "rtp://")
+        fcc_ip = ch.get("fcc_ip", "")
+        fcc_port = ch.get("fcc_port", "")
+        if url and fcc_ip and fcc_port:
+            url += f"?fcc={fcc_ip}:{fcc_port}"
+        return url
+
     def get_channels(self, page=1, size=50, keyword="", category=""):
         channels = self._load_json("channels.json") or []
         if keyword:
             channels = [c for c in channels if keyword in c.get("channelName", "")]
         if category:
             channels = [c for c in channels if category == c.get("category", "")]
-        total = len(channels)
+        items = [{
+            "channelIndex": c.get("channelIndex", ""),
+            "channelName": c.get("channelName", ""),
+            "channelID": c.get("channelID", ""),
+            "category": c.get("category", ""),
+            "group": categorize_channel(c.get("channelName", "")),
+            "rtsp_url": c.get("timeshift_url", ""),
+            "rtp_url": self._build_rtp_url(c),
+        } for c in channels]
+        total = len(items)
         start = (page - 1) * size
         return {"total": total, "page": page, "size": size,
-                "items": channels[start:start + size]}
+                "items": items[start:start + size]}
 
     def get_epg(self, channel_id):
         epgs = self._load_json("epg.json") or {}
