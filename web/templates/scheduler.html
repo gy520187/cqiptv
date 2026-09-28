@@ -3,54 +3,67 @@
 {% block content %}
 <h1>定时任务配置</h1>
 <div class="card sched-card">
-    <label style="display:flex;align-items:center;gap:8px;font-size:14px">
-        <input type="checkbox" id="sched-enabled" style="width:auto"> 启用定时采集
-    </label>
-    <label>cron 表达式
-        <input id="sched-cron" type="text" placeholder="0 4 * * *">
-    </label>
-    <div class="form-tip">
-        格式：<code>分 时 日 月 周</code>。示例：
-        <code>0 4 * * *</code> 每天 04:00 ·
-        <code>*/30 * * * *</code> 每 30 分钟 ·
-        <code>0 2,14 * * *</code> 每天 02:00 和 14:00
+    <p class="form-tip">可配置多个采集任务，任一 cron 到点即触发一次采集。格式：<code>分 时 日 月 周</code>，如 <code>0 4 * * *</code> 每天 04:00、<code>*/30 * * * *</code> 每 30 分钟。</p>
+    <div class="sched-jobs">
+        <div class="sched-head">
+            <span>启用</span><span>cron 表达式</span><span>下次运行时间</span><span></span>
+        </div>
+        <div id="job-list"></div>
     </div>
-    <div class="form-tip" id="next-run" style="font-weight:600"></div>
-    <button class="btn btn-primary" onclick="saveConfig()">保存</button>
+    <div class="toolbar" style="margin-bottom:0">
+        <button class="btn btn-default" onclick="addJob()">添加任务</button>
+        <button class="btn btn-primary" onclick="saveJobs()">保存全部</button>
+        <button class="btn btn-default" onclick="loadJobs()">刷新</button>
+    </div>
 </div>
 {% endblock %}
 
 {% block script %}
 <script>
-async function loadConfig() {
+let DEFAULT_CRON = '0 4 * * *';
+const jobList = document.getElementById('job-list');
+async function loadJobs() {
     const r = await fetch('/api/scheduler/config');
     const d = await r.json();
-    document.getElementById('sched-enabled').checked = d.enabled;
-    document.getElementById('sched-cron').value = d.cron;
-    renderNext(d.next_run);
+    DEFAULT_CRON = d.default_cron || DEFAULT_CRON;
+    jobList.innerHTML = '';
+    if (!d.jobs || !d.jobs.length) addJob();
+    (d.jobs || []).forEach(j => renderRow(j));
 }
-function renderNext(next) {
-    document.getElementById('next-run').textContent =
-        next ? '下次运行时间：' + next : '暂无法计算下次运行时间';
+function renderRow(job) {
+    const row = document.createElement('div');
+    row.className = 'sched-row';
+    row.innerHTML = `
+        <label class="sched-enable">
+            <input type="checkbox" ${job.enabled ? 'checked' : ''}>
+        </label>
+        <input class="sched-cron" type="text" value="${(job.cron || DEFAULT_CRON).replace(/"/g, '&quot;')}" placeholder="${DEFAULT_CRON}">
+        <span class="sched-next">${job.next_run || '-'}</span>
+        <button class="btn btn-danger btn-sm" onclick="this.closest('.sched-row').remove()">删除</button>`;
+    jobList.appendChild(row);
 }
-async function saveConfig() {
-    const data = {
-        enabled: document.getElementById('sched-enabled').checked,
-        cron: document.getElementById('sched-cron').value.trim(),
-    };
+function addJob() {
+    renderRow({enabled: true, cron: DEFAULT_CRON, next_run: null});
+}
+async function saveJobs() {
+    const rows = [...document.querySelectorAll('#job-list .sched-row')];
+    const jobs = rows.map(row => ({
+        enabled: row.querySelector('.sched-enable input').checked,
+        cron: row.querySelector('.sched-cron').value.trim(),
+    }));
     const r = await fetch('/api/scheduler/config', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(data),
+        body: JSON.stringify({jobs}),
     });
     const d = await r.json();
     if (d.ok) {
         toast('已保存');
-        renderNext(d.msg);
+        loadJobs();
     } else {
         toast(d.msg || '保存失败');
     }
 }
-loadConfig();
+loadJobs();
 </script>
 {% endblock %}
