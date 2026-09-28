@@ -3,8 +3,9 @@
 {% block content %}
 <h1>频道列表</h1>
 <div class="toolbar">
-    <input id="kw" placeholder="搜索频道名..." onkeyup="if(event.key==='Enter')loadChannels(1)">
-    <button onclick="loadChannels(1)">搜索</button>
+    <input id="kw" placeholder="搜索频道名..." onkeydown="if(event.key==='Enter')loadChannels(1)">
+    <select id="cat"><option value="">全部栏目</option></select>
+    <button class="btn btn-primary" onclick="loadChannels(1)">搜索</button>
 </div>
 <table class="table">
     <thead><tr><th>台号</th><th>频道名</th><th>栏目</th>
@@ -17,10 +18,26 @@
 {% block script %}
 <script>
 let curPage = 1;
+let curCat = '';
+
+async function loadCategories() {
+    const r = await fetch('/api/channels?page=1&size=500');
+    const d = await r.json();
+    const cats = [...new Set(d.items.map(c => c.category).filter(Boolean))].sort();
+    const sel = document.getElementById('cat');
+    cats.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        sel.appendChild(opt);
+    });
+}
+
 async function loadChannels(page) {
     curPage = page;
     const kw = document.getElementById('kw').value;
-    const r = await fetch(`/api/channels?page=${page}&size=50&keyword=${encodeURIComponent(kw)}`);
+    curCat = document.getElementById('cat').value;
+    const r = await fetch(`/api/channels?page=${page}&size=50&keyword=${encodeURIComponent(kw)}&category=${encodeURIComponent(curCat)}`);
     const d = await r.json();
     const tbody = document.getElementById('ch-tbody');
     tbody.innerHTML = '';
@@ -28,19 +45,23 @@ async function loadChannels(page) {
         const tr = document.createElement('tr');
         tr.innerHTML = `<td>${c.channelIndex}</td><td>${c.channelName}</td>
             <td>${c.category || ''}</td>
-            <td>${c.timeShift ? '✅' : '❌'}</td>
-            <td>${c.isTVOD ? '✅' : '❌'}</td>
-            <td>${c.hasSubscrib ? '✅' : '❌'}</td>
+            <td class="${c.timeShift ? 'status-ok' : 'status-no'}">${c.timeShift ? '是' : '否'}</td>
+            <td class="${c.isTVOD ? 'status-ok' : 'status-no'}">${c.isTVOD ? '是' : '否'}</td>
+            <td class="${c.hasSubscrib ? 'status-ok' : 'status-no'}">${c.hasSubscrib ? '是' : '否'}</td>
             <td><code>${c.mediacode || ''}</code></td>`;
         tbody.appendChild(tr);
     });
     renderPager(d.total, d.page, d.size);
 }
+
 function renderPager(total, page, size) {
     const pages = Math.ceil(total / size);
     const pager = document.getElementById('pager');
-    pager.innerHTML = `共 ${total} 条，${pages} 页 `;
-    for (let i = 1; i <= Math.min(pages, 20); i++) {
+    let html = `共 ${total} 条，${pages} 页 `;
+    pager.innerHTML = html;
+    const start = Math.max(1, page - 4);
+    const end = Math.min(pages, start + 9);
+    for (let i = start; i <= end; i++) {
         const b = document.createElement('button');
         b.textContent = i;
         b.className = i === page ? 'active' : '';
@@ -48,6 +69,8 @@ function renderPager(total, page, size) {
         pager.appendChild(b);
     }
 }
+
+loadCategories();
 loadChannels(1);
 </script>
 {% endblock %}

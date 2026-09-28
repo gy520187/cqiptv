@@ -8,12 +8,17 @@
         <div class="card-value" id="stat-channels">-</div>
     </div>
     <div class="card">
-        <div class="card-label">EPG 频道</div>
+        <div class="card-label">EPG 覆盖频道</div>
         <div class="card-value" id="stat-epg">-</div>
+    </div>
+    <div class="card">
+        <div class="card-label">EPG 覆盖天数</div>
+        <div class="card-value" id="stat-days">-</div>
     </div>
     <div class="card">
         <div class="card-label">解密密钥</div>
         <div class="card-value small" id="stat-key">-</div>
+        <div><span class="badge badge-idle" id="stat-collect">-</span></div>
     </div>
 </div>
 <h2>数据文件</h2>
@@ -36,14 +41,23 @@ async function loadStatus() {
     const d = await r.json();
     document.getElementById('stat-channels').textContent = d.channels;
     document.getElementById('stat-epg').textContent = d.epg_channels;
+    document.getElementById('stat-days').textContent = d.epg_days || '-';
     document.getElementById('stat-key').textContent = d.key;
+    const badge = document.getElementById('stat-collect');
+    if (d.collecting) {
+        badge.textContent = '采集中';
+        badge.className = 'badge badge-running';
+    } else {
+        badge.textContent = '空闲';
+        badge.className = 'badge badge-idle';
+    }
     const tbody = document.getElementById('file-tbody');
     tbody.innerHTML = '';
     d.files.forEach(f => {
         const tr = document.createElement('tr');
         tr.innerHTML = `<td>${f.name}</td><td>${fmtSize(f.size)}</td>
             <td>${fmtTime(f.mtime)}</td>
-            <td><a href="/api/download/${f.name}">下载</a></td>`;
+            <td><button class="btn btn-default btn-sm" onclick="location.href='/api/download/${f.name}'">下载</button></td>`;
         tbody.appendChild(tr);
     });
     const host = location.origin;
