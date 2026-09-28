@@ -74,11 +74,15 @@ class XMLTVGenerator:
             os.makedirs(constants.OUTPUT_DIR, exist_ok=True)
             xml = self.build(channels, epgs)
             p1 = os.path.join(constants.OUTPUT_DIR, "epg.xml")
-            with open(p1, "w", encoding="utf-8") as f:
+            tmp1 = p1 + ".tmp"
+            with open(tmp1, "w", encoding="utf-8") as f:
                 f.write(xml)
+            os.replace(tmp1, p1)
             p2 = os.path.join(constants.OUTPUT_DIR, "epg.xml.gz")
-            with gzip.open(p2, "wt", encoding="utf-8") as f:
+            tmp2 = p2 + ".tmp"
+            with gzip.open(tmp2, "wt", encoding="utf-8") as f:
                 f.write(xml)
+            os.replace(tmp2, p2)
             self.logger.info(f"保存: {p1}, {p2}")
             return p1, p2
         except Exception as e:

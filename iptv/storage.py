@@ -12,9 +12,11 @@ class Storage:
 
     def save_json(self, name, data):
         p = os.path.join(constants.OUTPUT_DIR, name)
-        with open(p, "w", encoding="utf-8") as f:
+        tmp = p + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False,
                       indent=2 if constants.OUTPUT_PRETTY else None)
+        os.replace(tmp, p)
         self.logger.info(f"保存: {p}")
 
     def save_sqlite(self, channels, epgs):
