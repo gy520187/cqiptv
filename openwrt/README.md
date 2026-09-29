@@ -106,7 +106,7 @@ LuCI 菜单「服务 -> IPTV 采集」即可打开管理页。
 config cqiptv 'web'
 	option port '6061'                      # Flask 服务端口（OpenWrt 版固定 6061，与 Docker 版 6060 区分）
 	option auth 'user:password'             # 可选 Basic 认证，留空不启用
-	option icon_host 'http://192.168.1.1:6061'  # M3U 图标地址（改路由器实际 IP）
+	option icon_host ''                     # M3U 图标地址，留空自动检测路由器 LAN IP（如 http://192.168.50.2:6061）
 	option epg_url ''                       # M3U x-tvg-url，留空用默认
 	option epg_workers '2'                  # EPG 并行线程数
 

@@ -9,6 +9,16 @@ APP_DIR=/usr/share/cqiptv
 WORK_DIR=/etc/cqiptv
 PYTHON=/usr/bin/python3
 
+# 自动检测本机 LAN IPv4（OpenWrt 优先 ubus 查 br-lan，回退 ip 命令）
+detect_lan_ip() {
+    local ip
+    ip=$(ubus call network.interface.lan status 2>/dev/null | awk -F'"' '/"address"/{print $4; exit}')
+    [ -n "$ip" ] && { echo "$ip"; return; }
+    ip=$(ip -4 -o addr show dev br-lan 2>/dev/null | awk '{print $4}' | cut -d/ -f1)
+    [ -n "$ip" ] && { echo "$ip"; return; }
+    echo "192.168.1.1"
+}
+
 start_service() {
     # 准备运行时工作目录
     [ -d "$WORK_DIR" ] || mkdir -p "$WORK_DIR"
@@ -25,7 +35,10 @@ start_service() {
     local sched_enabled cron
     config_get port 'web' 'port' '6061'
     config_get web_auth 'web' 'auth' ''
-    config_get icon_host 'web' 'icon_host' 'http://192.168.1.1:6061'
+    config_get icon_host 'web' 'icon_host' ''
+    if [ -z "$icon_host" ] || [ "$icon_host" = "http://192.168.1.1:6061" ]; then
+        icon_host="http://$(detect_lan_ip):$port"
+    fi
     config_get epg_url 'web' 'epg_url' ''
     config_get epg_workers 'web' 'epg_workers' '2'
     config_get sched_enabled 'scheduler' 'enabled' '0'

@@ -50,9 +50,31 @@ IS_COUNTRY_CHANNEL = 1
 EXCLUDE_CHANNELS = {"江苏晚会4K", "江苏晚会4k", "重庆卫视频道"}
 
 # ========== 图标 ==========
+# 自动检测本机局域网 IP（OpenWrt 优先 br-lan），未检测到时回退占位地址
+def _detect_lan_ip():
+    try:
+        import subprocess
+        for dev in ("br-lan", "eth0", "eth0.2", "en0", "wlan0"):
+            try:
+                out = subprocess.check_output(
+                    ["ip", "-4", "-o", "addr", "show", "dev", dev],
+                    stderr=subprocess.DEVNULL, timeout=3,
+                ).decode("utf-8", "ignore")
+                for line in out.splitlines():
+                    parts = line.split()
+                    if len(parts) >= 4 and "/" in parts[3]:
+                        return parts[3].split("/")[0]
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return ""
+
 # 注意: icon.py 中实际使用 gh-proxy 加速的 FANMINGMING_BASE，此路径常量仅供部署参考
 ICON_DIR = "data/icon"
-ICON_HOST = os.getenv("ICON_HOST", "http://your-server:6060")   # M3U 引用的图标地址，改成播放器可达的服务器地址
+_DEFAULT_WEB_PORT = os.getenv("WEB_PORT") or "6060"
+_lan_ip = _detect_lan_ip()
+ICON_HOST = os.getenv("ICON_HOST") or (f"http://{_lan_ip}:{_DEFAULT_WEB_PORT}" if _lan_ip else "http://your-server:6060")   # M3U 引用的图标地址；自动使用本机 LAN IP，播放器可达
 EPG_URL = os.getenv("EPG_URL") or f"{ICON_HOST}/epg.xml.gz"     # M3U 头部 x-tvg-url 指向的节目单地址，留空默认 ICON_HOST/epg.xml.gz（gzip 版体积约为 xml 的 1/10）
 ICON_FORCE = False
 
