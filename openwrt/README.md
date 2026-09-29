@@ -7,6 +7,8 @@
 | `cqiptv` | 主程序：Flask Web 管理 + 采集器 + 定时任务，数据存于 `/etc/cqiptv` |
 | `luci-app-cqiptv` | LuCI 界面：状态查看、触发采集、输出文件下载、日志查看 |
 
+`cqiptv` 包**内置 112 个常用频道图标**（安装后自动复制到 `/etc/cqiptv/data/icon`，不覆盖已有图标），未内置的新频道图标采集时仍会在线下载。
+
 ## 依赖处理
 
 OpenWrt 24.10 官方源中**没有 `python3-apscheduler` 和 `python3-tzlocal`**，

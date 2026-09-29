@@ -23,10 +23,15 @@ start_service() {
     # 准备运行时工作目录
     [ -d "$WORK_DIR" ] || mkdir -p "$WORK_DIR"
     [ -d "$WORK_DIR/data" ] || mkdir -p "$WORK_DIR/data"
+    [ -d "$WORK_DIR/data/icon" ] || mkdir -p "$WORK_DIR/data/icon"
     [ -d "$WORK_DIR/output" ] || mkdir -p "$WORK_DIR/output"
     [ -d "$WORK_DIR/log" ] || mkdir -p "$WORK_DIR/log"
     if [ ! -f "$WORK_DIR/config.example.yaml" ]; then
         cp "$APP_DIR/config.example.yaml" "$WORK_DIR/" 2>/dev/null || true
+    fi
+    # 内置频道图标首次启动复制到运行时数据目录（不覆盖已有图标）
+    if [ -d "$APP_DIR/data/icon" ]; then
+        cp -n "$APP_DIR/data/icon/"*.png "$WORK_DIR/data/icon/" 2>/dev/null || true
     fi
 
     # 从 UCI 读取配置
