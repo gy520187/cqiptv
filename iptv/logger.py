@@ -1,9 +1,21 @@
 # iptv/logger.py
 import os
 import sys
+import datetime
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from . import constants
+
+
+class _CSTFormatter(logging.Formatter):
+    """固定使用北京时间格式化日志，不依赖系统时区/tzset（兼容 OpenWrt Python）。"""
+
+    def formatTime(self, record, datefmt=None):
+        dt = datetime.datetime.fromtimestamp(
+            record.created,
+            datetime.timezone(datetime.timedelta(hours=8)),
+        )
+        return dt.strftime(datefmt or "%Y-%m-%d %H:%M:%S")
 
 
 def setup_logger(cfg=None) -> logging.Logger:
@@ -13,7 +25,7 @@ def setup_logger(cfg=None) -> logging.Logger:
     logger.setLevel(getattr(logging, constants.LOG_LEVEL.upper()))
     logger.handlers.clear()
 
-    fmt = logging.Formatter(
+    fmt = _CSTFormatter(
         "%(asctime)s - %(levelname)s - %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
