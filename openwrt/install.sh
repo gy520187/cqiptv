@@ -203,11 +203,24 @@ do_uninstall() {
     info "卸载软件包 ..."
     opkg remove luci-app-cqiptv cqiptv
     if [ "$purge" = "purge" ]; then
+        # 清理安装临时文件
+        rm -rf /tmp/cqiptv-install-* 2>/dev/null || true
         # 彻底删除：运行时数据目录（config.yaml、output m3u/epg、data/icon、data/epg_cache、log）
-        [ -d /etc/cqiptv ] && { info "删除运行时数据 /etc/cqiptv（配置/M3U/EPG/图标/日志）..."; rm -rf /etc/cqiptv; }
+        if [ -d /etc/cqiptv ]; then
+            info "删除运行时数据 /etc/cqiptv（配置/M3U/EPG/图标/日志）..."
+            rm -rf /etc/cqiptv
+        fi
         # UCI 配置（opkg 卸载默认保留 conffile，这里一并删除）
-        [ -f /etc/config/cqiptv ] && { info "删除 UCI 配置 /etc/config/cqiptv ..."; rm -f /etc/config/cqiptv; }
-        info "卸载完成（配置、M3U、EPG、图标等数据已全部清除）。"
+        if [ -f /etc/config/cqiptv ]; then
+            info "删除 UCI 配置 /etc/config/cqiptv ..."
+            rm -f /etc/config/cqiptv
+        fi
+        # 验证删除结果
+        if [ -d /etc/cqiptv ] || [ -f /etc/config/cqiptv ]; then
+            err "数据清除不完整，请手动检查 /etc/cqiptv 与 /etc/config/cqiptv。"
+        else
+            info "卸载完成（配置、M3U、EPG、图标等数据已全部清除）。"
+        fi
     else
         info "卸载完成。"
         info "提示: 运行时数据保留在 /etc/cqiptv，彻底删除请执行: sh install.sh uninstall-full"
