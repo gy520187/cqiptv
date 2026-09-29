@@ -185,10 +185,16 @@ do_reinstall() {
     info "强制重装完成。"
 }
 
-# ---------- 卸载（保留 /etc/cqiptv 数据） ----------
+# ---------- 卸载 ----------
+# 用法: do_uninstall [purge]
+#   purge    卸载同时删除 /etc/cqiptv 运行时数据（不保留数据）
 do_uninstall() {
+    local purge="${1:-}"
     if ! is_installed cqiptv && ! is_installed luci-app-cqiptv; then
         warn "未安装 cqiptv，无需卸载。"
+        if [ "$purge" = "purge" ]; then
+            [ -d /etc/cqiptv ] && { info "删除运行时数据 /etc/cqiptv ..."; rm -rf /etc/cqiptv; }
+        fi
         return 0
     fi
     info "停止并禁用服务 ..."
@@ -196,8 +202,13 @@ do_uninstall() {
     /etc/init.d/cqiptv disable 2>/dev/null || true
     info "卸载软件包 ..."
     opkg remove luci-app-cqiptv cqiptv
-    info "卸载完成。"
-    info "提示: 运行时数据保留在 /etc/cqiptv，如需彻底删除请手动执行: rm -rf /etc/cqiptv"
+    if [ "$purge" = "purge" ]; then
+        [ -d /etc/cqiptv ] && { info "删除运行时数据 /etc/cqiptv ..."; rm -rf /etc/cqiptv; }
+        info "卸载完成（数据已清除）。"
+    else
+        info "卸载完成。"
+        info "提示: 运行时数据保留在 /etc/cqiptv，彻底删除请执行: sh install.sh uninstall-full"
+    fi
 }
 
 # ---------- 状态查看 ----------
@@ -233,10 +244,11 @@ interactive_menu() {
         echo "  2) 更新到最新版"
         echo "  3) 强制重装"
         echo "  4) 卸载（保留 /etc/cqiptv 数据）"
-        echo "  5) 查看状态"
-        echo "  6) 退出"
+        echo "  5) 卸载（不保留数据）"
+        echo "  6) 查看状态"
+        echo "  7) 退出"
         echo ""
-        printf "请输入选项 [1-6] (默认: 1): "
+        printf "请输入选项 [1-7] (默认: 1): "
         read choice < /dev/tty || choice="1"
         [ -z "$choice" ] && choice="1"
         echo ""
@@ -245,9 +257,10 @@ interactive_menu() {
             2) do_update; return 0 ;;
             3) do_reinstall; return 0 ;;
             4) do_uninstall; return 0 ;;
-            5) do_status; return 0 ;;
-            6) info "已退出"; return 0 ;;
-            *) warn "无效选项，请重新输入 [1-6]" ;;
+            5) do_uninstall purge; return 0 ;;
+            6) do_status; return 0 ;;
+            7) info "已退出"; return 0 ;;
+            *) warn "无效选项，请重新输入 [1-7]" ;;
         esac
     done
 }
@@ -263,6 +276,7 @@ cqiptv OpenWrt 一键管理脚本
   update       更新到最新版
   reinstall    强制重装（覆盖已安装文件）
   uninstall    卸载（保留 /etc/cqiptv 数据）
+  uninstall-full 卸载并删除 /etc/cqiptv 数据（不保留）
   status       查看环境/安装/服务状态
   help         显示本帮助
 
@@ -296,6 +310,10 @@ case "$ACTION" in
     uninstall)
         apply_mirror
         do_uninstall
+        ;;
+    uninstall-full|purge)
+        apply_mirror
+        do_uninstall purge
         ;;
     status)
         do_status
