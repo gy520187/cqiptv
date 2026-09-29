@@ -89,20 +89,20 @@ python scheduler.py    # 定时采集
 
 ### OpenWrt 24.10 一键安装/管理脚本（x86_64）
 
-适用于 OpenWrt 24.10 x86_64 路由器（软路由，含 iStoreOS）。软件包已发布到 GitHub Releases，推荐使用一键管理脚本（自动检测平台/架构、检查是否已安装，支持安装、更新、强制重装、卸载）：
+适用于 OpenWrt 24.10 x86_64 路由器（软路由，含 iStoreOS）。软件包已发布到 GitHub Releases，推荐使用一键管理脚本（可互动：先选择 GitHub 访问方式，再进入操作菜单；支持安装、更新、强制重装、卸载）：
 
 ```bash
+# 交互模式：选择 GitHub 访问方式（官方直连 / gh-proxy.com / ghfast.top 镜像）后进入操作菜单
 uclient-fetch -q --no-check-certificate -O - https://github.com/gy520187/cqiptv/releases/download/v1.0.0/install.sh | sh
 ```
 
-> 若 `github.com` 直连不稳定，可改用仓库 raw 地址（需能访问 `raw.githubusercontent.com`）：
+> 若 `github.com` 直连不稳定，在交互模式中可选择 `gh-proxy.com` 或 `ghfast.top` 镜像加速；也可以改用仓库 raw 地址（需能访问 `raw.githubusercontent.com`）：
 > `uclient-fetch -q --no-check-certificate -O - https://raw.githubusercontent.com/gy520187/cqiptv/main/openwrt/install.sh | sh`
 > 若命令执行后无任何输出，先去掉 `-q` 重跑一次查看网络错误；若已安装 `ca-certificates`，可去掉 `--no-check-certificate`。缺少 `curl` 时脚本会自动 `opkg install curl`。
 
-后续更新与管理同样使用该脚本（`sh -s` 传递命令参数）：
+非交互模式（`sh -s` 传递命令参数，可用环境变量 `GITHUB_MIRROR=gh-proxy|ghfast` 指定镜像）：
 
 ```bash
-uclient-fetch -q --no-check-certificate -O - https://github.com/gy520187/cqiptv/releases/download/v1.0.0/install.sh | sh                 # 安装
 uclient-fetch -q --no-check-certificate -O - https://github.com/gy520187/cqiptv/releases/download/v1.0.0/install.sh | sh -s update      # 更新到最新版
 uclient-fetch -q --no-check-certificate -O - https://github.com/gy520187/cqiptv/releases/download/v1.0.0/install.sh | sh -s reinstall   # 强制重装（文件损坏/权限异常时）
 uclient-fetch -q --no-check-certificate -O - https://github.com/gy520187/cqiptv/releases/download/v1.0.0/install.sh | sh -s uninstall   # 卸载（保留 /etc/cqiptv 数据）

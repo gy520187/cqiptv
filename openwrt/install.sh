@@ -1,30 +1,44 @@
 #!/bin/sh
-# cqiptv OpenWrt 一键安装/更新/卸载脚本
+# cqiptv OpenWrt 一键安装/更新/卸载脚本（可互动）
 # 适用: OpenWrt 24.10 x86_64 / iStoreOS x86_64
 #
 # 用法:
-#   sh install.sh               安装（默认）
+#   sh install.sh               交互模式（菜单选择，推荐）
 #   sh install.sh install      安装
 #   sh install.sh update       更新到最新版
 #   sh install.sh reinstall    强制重装
 #   sh install.sh uninstall    卸载
 #   sh install.sh status       查看状态
 #   sh install.sh help          帮助
+#
+# 环境变量:
+#   GITHUB_MIRROR=official|gh-proxy|ghfast   指定 GitHub 访问方式（非交互模式）
 
 set -u
 
-# 下载地址（后续版本更新时只需修改资产文件名）
-BASE_URL="https://github.com/gy520187/cqiptv/releases/latest/download"
+# ---------- GitHub 仓库与下载地址 ----------
+REPO_OWNER="gy520187"
+REPO_NAME="cqiptv"
+RELEASE_VERSION="v1.0.0"
 PKG_MAIN="cqiptv_1.0.0-1_x86_64.ipk"
 PKG_LUCI="luci-app-cqiptv_1.0.0-1_x86_64.ipk"
 ARCH="x86_64"
 
-ACTION="${1:-install}"
+BASE_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${RELEASE_VERSION}"
 TMPDIR="/tmp/cqiptv-install-$$"
 
-info()  { echo "[INFO] $*"; }
-warn()  { echo "[WARN] $*"; }
-err()   { echo "[ERROR] $*" >&2; }
+# ---------- 颜色输出 ----------
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+info()  { printf "${GREEN}[INFO]${NC} %s\n" "$*"; }
+warn()  { printf "${YELLOW}[WARN]${NC} %s\n" "$*"; }
+err()   { printf "${RED}[ERROR]${NC} %s\n" "$*" >&2; }
+
+ACTION="${1:-}"
 
 # ---------- 平台环境检测 ----------
 check_env() {
@@ -46,9 +60,59 @@ check_env() {
     fi
     # GitHub Release 可达性
     if ! curl -kLs --max-time 10 -o /dev/null -w '%{http_code}' "$BASE_URL/$PKG_MAIN" 2>/dev/null | grep -q '200'; then
-        err "无法访问 GitHub Release（$BASE_URL），请检查网络。"
+        err "无法访问下载地址（$BASE_URL），请检查网络或在交互模式中选择镜像。"
         exit 1
     fi
+}
+
+# ---------- 选择 GitHub 访问方式（交互模式） ----------
+select_github_mirror() {
+    echo ""
+    echo "=========================================="
+    echo " 选择 GitHub 访问方式"
+    echo "=========================================="
+    echo ""
+    echo "  1) GitHub 官方 (直连)"
+    echo "  2) gh-proxy.com (镜像加速)"
+    echo "  3) ghfast.top (镜像加速)"
+    echo ""
+    printf "请输入选项 [1-3] (默认: 1): "
+    read choice < /dev/tty || choice="1"
+    [ -z "$choice" ] && choice="1"
+    echo ""
+    case "$choice" in
+        1)
+            BASE_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${RELEASE_VERSION}"
+            info "使用 GitHub 官方直连"
+            ;;
+        2)
+            BASE_URL="https://gh-proxy.com/https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${RELEASE_VERSION}"
+            info "使用 gh-proxy.com 镜像加速"
+            ;;
+        3)
+            BASE_URL="https://ghfast.top/https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${RELEASE_VERSION}"
+            info "使用 ghfast.top 镜像加速"
+            ;;
+        *)
+            warn "无效选项，使用默认: GitHub 官方直连"
+            ;;
+    esac
+    echo ""
+}
+
+# ---------- 应用镜像（非交互模式，通过 GITHUB_MIRROR 环境变量） ----------
+apply_mirror() {
+    case "${GITHUB_MIRROR:-official}" in
+        gh-proxy)
+            BASE_URL="https://gh-proxy.com/https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${RELEASE_VERSION}"
+            ;;
+        ghfast)
+            BASE_URL="https://ghfast.top/https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${RELEASE_VERSION}"
+            ;;
+        *)
+            BASE_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${RELEASE_VERSION}"
+            ;;
+    esac
 }
 
 # ---------- 软件包状态检测 ----------
@@ -157,33 +221,91 @@ do_status() {
     fi
 }
 
+# ---------- 交互主菜单 ----------
+interactive_menu() {
+    while :; do
+        echo ""
+        echo "=========================================="
+        echo "  cqiptv OpenWrt 一键管理"
+        echo "=========================================="
+        echo ""
+        echo "  1) 安装"
+        echo "  2) 更新到最新版"
+        echo "  3) 强制重装"
+        echo "  4) 卸载（保留 /etc/cqiptv 数据）"
+        echo "  5) 查看状态"
+        echo "  6) 退出"
+        echo ""
+        printf "请输入选项 [1-6] (默认: 1): "
+        read choice < /dev/tty || choice="1"
+        [ -z "$choice" ] && choice="1"
+        echo ""
+        case "$choice" in
+            1) do_install; return 0 ;;
+            2) do_update; return 0 ;;
+            3) do_reinstall; return 0 ;;
+            4) do_uninstall; return 0 ;;
+            5) do_status; return 0 ;;
+            6) info "已退出"; return 0 ;;
+            *) warn "无效选项，请重新输入 [1-6]" ;;
+        esac
+    done
+}
+
 show_help() {
     cat <<EOF
 cqiptv OpenWrt 一键管理脚本
 用法: sh install.sh [命令]
 
 命令列表:
-  install      安装（默认）
+  （无参数）   交互模式（菜单选择）
+  install      安装
   update       更新到最新版
   reinstall    强制重装（覆盖已安装文件）
   uninstall    卸载（保留 /etc/cqiptv 数据）
   status       查看环境/安装/服务状态
   help         显示本帮助
 
+环境变量:
+  GITHUB_MIRROR=official|gh-proxy|ghfast   指定 GitHub 访问方式（非交互模式）
+
 示例:
-  sh $0 install
-  sh $0 update
-  sh $0 reinstall
-  sh $0 uninstall
+  sh install.sh
+  sh install.sh update
+  sh install.sh reinstall
 EOF
 }
 
 case "$ACTION" in
-    install)       do_install ;;
-    update)        do_update ;;
-    reinstall)     do_reinstall ;;
-    uninstall)     do_uninstall ;;
-    status)         do_status ;;
-    help|-h|--help) show_help ;;
-    *) err "未知命令: $ACTION"; show_help; exit 1 ;;
+    ""|interactive)
+        select_github_mirror
+        interactive_menu
+        ;;
+    install)
+        apply_mirror
+        do_install
+        ;;
+    update)
+        apply_mirror
+        do_update
+        ;;
+    reinstall)
+        apply_mirror
+        do_reinstall
+        ;;
+    uninstall)
+        apply_mirror
+        do_uninstall
+        ;;
+    status)
+        do_status
+        ;;
+    help|-h|--help)
+        show_help
+        ;;
+    *)
+        err "未知命令: $ACTION"
+        show_help
+        exit 1
+        ;;
 esac
