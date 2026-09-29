@@ -55,10 +55,11 @@ def _next_run_multi(jobs, now=None):
 
 def _maybe_reload():
     """Web 保存定时任务配置后写入标记文件，检测到则重新加载配置。
+    返回 True 表示发生了重新加载。
     任何异常都不能导致进程退出：加载失败也删除标记，避免容器重启循环。"""
     flag = constants.SCHEDULER_RELOAD_FLAG
     if not os.path.exists(flag):
-        return
+        return False
     try:
         cfg.load()
         logger.info("检测到定时任务配置已更新，已重新加载")
@@ -69,6 +70,21 @@ def _maybe_reload():
             os.remove(flag)
         except OSError:
             pass
+    return True
+
+
+def _log_schedule_status(jobs, nr=None):
+    """打印各任务下次运行时间和最近触发时间。
+    仅在首次启动、定时任务配置更新、上一定时任务完成后调用。"""
+    for cron in jobs:
+        t = _next_run(cron)
+        if t:
+            logger.info(f"  任务 cron={cron} 下次运行 {t.strftime('%Y-%m-%d %H:%M:%S')}")
+    if nr is None:
+        nr = _next_run_multi(jobs)
+    if nr:
+        delta = (nr - datetime.now()).total_seconds()
+        logger.info(f"最近触发: {nr.strftime('%Y-%m-%d %H:%M:%S')}（{delta:.0f} 秒后）")
 
 
 def job():
@@ -85,10 +101,15 @@ def job():
 def main_loop():
     cfg.load()
     logger.info("定时任务启动（多任务循环调度，保存配置后自动重新加载）")
-    last_status_log = 0.0
+    jobs = _load_jobs()
+    if jobs:
+        _log_schedule_status(jobs)
     while True:
         try:
-            _maybe_reload()
+            if _maybe_reload():
+                jobs = _load_jobs()
+                if jobs:
+                    _log_schedule_status(jobs)
             jobs = _load_jobs()
             if not jobs:
                 time.sleep(5)
@@ -98,14 +119,6 @@ def main_loop():
                 logger.error(f"定时任务 cron 均无效: {jobs}")
                 time.sleep(60)
                 continue
-            if time.time() - last_status_log >= 60:
-                for cron in jobs:
-                    t = _next_run(cron)
-                    if t:
-                        logger.info(f"  任务 cron={cron} 下次运行 {t.strftime('%Y-%m-%d %H:%M:%S')}")
-                delta = (nr - datetime.now()).total_seconds()
-                logger.info(f"最近触发: {nr.strftime('%Y-%m-%d %H:%M:%S')}（{delta:.0f} 秒后）")
-                last_status_log = time.time()
             delta = (nr - datetime.now()).total_seconds()
             if delta > 60:
                 time.sleep(5)
@@ -115,10 +128,9 @@ def main_loop():
             jobs = _load_jobs()
             if not jobs:
                 continue
-            # 用入睡前的目标时间判断是否到点：sleep 可能因调度延迟醒来时已过触发点，
-            # 若重新计算 _next_run 会跳到下一个触发时间，导致本次任务被静默跳过
             if nr <= datetime.now():
                 job()
+                _log_schedule_status(jobs)
             time.sleep(2)
         except Exception as e:
             logger.error(f"调度循环异常: {e}", exc_info=True)
