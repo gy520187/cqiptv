@@ -222,27 +222,37 @@ def api_logs():
 @app.route("/api/download/<path:fn>")
 def api_download(fn):
     # send_from_directory 内部用 safe_join 校验路径，阻断 ../ 穿越
-    return send_from_directory(constants.OUTPUT_DIR, fn, as_attachment=True)
+    # 注意：目录必须传绝对路径，相对路径会被 Flask 按 app.root_path 解析导致找不到文件
+    return send_from_directory(os.path.abspath(constants.OUTPUT_DIR), fn, as_attachment=True)
 
 
 @app.route("/playlist.m3u")
 def playlist():
-    return send_file(os.path.join(constants.OUTPUT_DIR, "playlist.m3u"))
+    path = os.path.abspath(os.path.join(constants.OUTPUT_DIR, "playlist.m3u"))
+    if not os.path.isfile(path):
+        return "playlist.m3u 尚未生成，请先执行采集", 404
+    return send_file(path)
 
 
 @app.route("/epg.xml")
 def epg_xml():
-    return send_file(os.path.join(constants.OUTPUT_DIR, "epg.xml"))
+    path = os.path.abspath(os.path.join(constants.OUTPUT_DIR, "epg.xml"))
+    if not os.path.isfile(path):
+        return "epg.xml 尚未生成，请先执行采集", 404
+    return send_file(path)
 
 
 @app.route("/epg.xml.gz")
 def epg_gz():
-    return send_file(os.path.join(constants.OUTPUT_DIR, "epg.xml.gz"))
+    path = os.path.abspath(os.path.join(constants.OUTPUT_DIR, "epg.xml.gz"))
+    if not os.path.isfile(path):
+        return "epg.xml.gz 尚未生成，请先执行采集", 404
+    return send_file(path)
 
 
 @app.route("/data/icon/<path:fn>")
 def icon(fn):
-    return send_from_directory(constants.ICON_DIR, fn)
+    return send_from_directory(os.path.abspath(constants.ICON_DIR), fn)
 
 
 if __name__ == "__main__":
