@@ -1,4 +1,5 @@
 # main.py
+import os
 import argparse
 import sys
 import traceback
@@ -20,13 +21,47 @@ from iptv.storage import Storage
 from iptv.utils import mask_secret
 
 
+def _acquire_collect_lock(logger):
+    """跨进程采集互斥锁：Web 手动采集与 scheduler 定时采集是独立进程，
+    不加锁会同时请求运营商并竞争写 output 文件。非阻塞获取，失败说明另一进程正在采集。"""
+    os.makedirs(constants.OUTPUT_DIR, exist_ok=True)
+    lock_path = os.path.join(constants.OUTPUT_DIR, ".collect.lock")
+    f = open(lock_path, "w", encoding="utf-8")
+    try:
+        import fcntl
+        fcntl.flock(f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return f
+    except OSError:
+        f.close()
+        return None
+    except ImportError:
+        # 无 fcntl 平台（如 Windows）退化为单进程占位，不互斥
+        return f
+
+
+def _release_collect_lock(lock):
+    try:
+        import fcntl
+        fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
+    except Exception:
+        pass
+    finally:
+        lock.close()
+
+
 def collect(allow_crack=True, force_refresh=False):
     logger = None
+    lock = None
     try:
         cfg = load_config("config.yaml")
         logger = setup_logger(cfg)
         logger.info("=" * 60)
         logger.info("IPTV 采集开始")
+
+        lock = _acquire_collect_lock(logger)
+        if lock is None:
+            logger.info("已有采集任务在运行，跳过本次采集")
+            return
 
         if cfg.is_first_run():
             logger.error("配置不完整，请先在 Web 界面配置")
@@ -164,6 +199,10 @@ def collect(allow_crack=True, force_refresh=False):
             print(f"采集失败: {e}")
             traceback.print_exc()
         raise
+    finally:
+        # 无论正常完成、异常还是 sys.exit，都释放互斥锁
+        if lock is not None:
+            _release_collect_lock(lock)
 
 
 if __name__ == "__main__":

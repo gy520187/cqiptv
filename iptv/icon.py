@@ -1,8 +1,10 @@
 # iptv/icon.py
 import os
 import re
+import threading
 import urllib.parse
 import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from . import constants
 from .utils import normalize_channel_name
 from .icon_alias import get_fanmingming_name
@@ -18,6 +20,11 @@ class IconHandler:
         self.icon_dir = constants.ICON_DIR
         os.makedirs(self.icon_dir, exist_ok=True)
         self.stats = {"downloaded": 0, "skipped": 0, "failed": 0, "placeholder": 0}
+        self._stats_lock = threading.Lock()
+
+    def _inc(self, key):
+        with self._stats_lock:
+            self.stats[key] += 1
 
     def icon_path(self, name):
         n = normalize_channel_name(name)
@@ -40,12 +47,12 @@ class IconHandler:
                 if r.status_code == 200 and len(r.content) > 100:
                     with open(self.icon_path(name), "wb") as f:
                         f.write(r.content)
-                    self.stats["downloaded"] += 1
+                    self._inc("downloaded")
                     self.logger.info(f"  下载: {name} → {fm}.{ext}")
                     return True
             except Exception as e:
                 self.logger.debug(f"  下载失败 {url}: {e}")
-        self.stats["failed"] += 1
+        self._inc("failed")
         return False
 
     def generate_placeholder(self, name):
@@ -78,7 +85,7 @@ class IconHandler:
             draw.text(((200 - w) / 2, (200 - h) / 2), text[:8],
                       fill=(255, 255, 255), font=font)
             img.save(path)
-            self.stats["placeholder"] += 1
+            self._inc("placeholder")
             return True
         except Exception as e:
             self.logger.error(f"  占位图失败 {name}: {e}")
@@ -86,26 +93,35 @@ class IconHandler:
 
     def ensure_one(self, name, force=False):
         if not force and self.exists(name):
-            self.stats["skipped"] += 1
+            self._inc("skipped")
             return True
         if self.download_from_fanmingming(name):
             return True
         return self.generate_placeholder(name)
 
-    def ensure_all(self, channels, force=False):
+    def _process_one(self, ch, force):
+        """单个频道的图标处理（供线程池调用），返回频道名用于进度日志"""
+        if not ch or not isinstance(ch, dict):
+            return ""
+        name = ch.get("channelName", "")
+        if not name:
+            return ""
+        self.ensure_one(name, force=force)
+        return name
+
+    def ensure_all(self, channels, force=False, workers=8):
         if not channels:
             return self.stats
         total = len(channels)
-        self.logger.info(f"处理图标 {total} 个（源: gh-proxy.com）")
-        for i, ch in enumerate(channels):
-            if not ch or not isinstance(ch, dict):
-                continue
-            name = ch.get("channelName", "")
-            if not name:
-                continue
-            if (i + 1) % 10 == 0 or i == 0 or i == total - 1:
-                self.logger.info(f"  [{i+1}/{total}] {name}")
-            self.ensure_one(name, force=force)
+        self.logger.info(f"处理图标 {total} 个（源: gh-proxy.com，{workers} 线程并发）")
+        done = 0
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = [pool.submit(self._process_one, ch, force) for ch in channels]
+            for fut in as_completed(futures):
+                name = fut.result()
+                done += 1
+                if done % 10 == 0 or done == 1 or done == total:
+                    self.logger.info(f"  [{done}/{total}] {name}")
         self.logger.info(
             f"图标完成: 下载 {self.stats['downloaded']}, "
             f"跳过 {self.stats['skipped']}, 失败 {self.stats['failed']}, "

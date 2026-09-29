@@ -103,6 +103,10 @@ function fmt14(s) {
     return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)} ${s.slice(8, 10)}:${s.slice(10, 12)}`;
 }
 
+function esc(s) {
+    return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function renderEpg() {
     const tbody = document.getElementById('epg-tbody');
     if (!epgData.length) {
@@ -119,7 +123,7 @@ function renderEpg() {
         const isNow = nowStr >= +(p.beginTimeFormat || 0) && nowStr < +(p.endTimeFormat || 0);
         tr.innerHTML = `<td class="epg-time">${fmt14(p.beginTimeFormat)}</td>
             <td class="epg-time">${fmt14(p.endTimeFormat)}</td>
-            <td class="${isNow ? 'epg-now' : ''}">${p.programName || ''}</td>`;
+            <td class="${isNow ? 'epg-now' : ''}">${esc(p.programName)}</td>`;
         tbody.appendChild(tr);
     });
 }

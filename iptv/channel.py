@@ -54,9 +54,14 @@ class ChannelCollector:
         cleaned = 0
         for cat in channels:
             for ch in cat.get("chanList", []):
-                idx = ch["channelIndex"]
+                if not isinstance(ch, dict):
+                    continue
+                idx = ch.get("channelIndex")
+                if idx is None:
+                    # 运营商数据异常时跳过，避免 KeyError 中断整个采集
+                    continue
                 if idx not in seen:
-                    raw = ch["channelName"]
+                    raw = ch.get("channelName", "")
                     clean = clean_channel_name(raw)
                     if raw != clean:
                         cleaned += 1
@@ -64,7 +69,7 @@ class ChannelCollector:
                         "channelIndex": idx,
                         "channelName": clean,
                         "channelNameRaw": raw,
-                        "channelID": ch["channelID"],
+                        "channelID": ch.get("channelID", ""),
                         "timeShift": ch.get("timeShift"),
                         "isTVOD": ch.get("isTVOD"),
                         "hasSubscrib": ch.get("hasSubscrib"),

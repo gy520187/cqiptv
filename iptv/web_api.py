@@ -3,7 +3,7 @@ import os
 import json
 import threading
 from . import constants
-from .utils import categorize_channel
+from .utils import categorize_channel, mask_secret
 
 # 总览页仅展示这三个数据文件
 STATUS_FILES = {"playlist.m3u", "epg.xml", "epg.xml.gz"}
@@ -49,7 +49,7 @@ class WebAPI:
             "channels": len(channels),
             "epg_channels": len(epgs),
             "epg_days": len(dates),
-            "key": self.cfg.key or "（未破解）",
+            "key": mask_secret(self.cfg.key) if self.cfg.key else "（未破解）",
             "files": files,
             "collecting": not self._collect_progress["done"],
             "cracking": not self._crack_progress["done"],
@@ -98,13 +98,22 @@ class WebAPI:
         return epgs.get(channel_id, {})
 
     def get_config(self):
-        return self.cfg.raw
+        # 配置页回显脱敏：key/Authenticator 属敏感凭据，不返回明文
+        raw = dict(self.cfg.raw or {})
+        for field in ("key", "Authenticator"):
+            if raw.get(field):
+                raw[field] = mask_secret(raw[field])
+        return raw
 
     def save_config(self, data):
         try:
             for k, v in data.items():
-                if k in self.ALLOWED_FIELDS:
-                    self.cfg.set(k, v)
+                if k not in self.ALLOWED_FIELDS:
+                    continue
+                # 配置页对 key/Authenticator 脱敏显示，含 * 说明用户未修改，保留原值
+                if k in ("key", "Authenticator") and "*" in str(v):
+                    continue
+                self.cfg.set(k, v)
             self.cfg.save()
             self.logger.info(f"配置已保存: {list(data.keys())}")
             return True, "保存成功"
@@ -117,8 +126,18 @@ class WebAPI:
     def test_config(self):
         try:
             import requests
-            url = self.cfg.auth_ip or constants.DEFAULT_EPG_BASE
-            r = requests.get(url, timeout=5)
+            base = self.cfg.auth_ip or constants.DEFAULT_EPG_BASE
+            if not base.startswith("http"):
+                base = f"http://{base}"
+            # 与认证流程一致：auth_ip 去掉 /EPG/jsp 后访问认证入口
+            auth_base = base.replace("/EPG/jsp", "").rstrip("/")
+            uid = self.cfg.user_id
+            if uid:
+                url = f"{auth_base}/EDS/jsp/AuthenticationURL?UserID={uid}&Action=Login&FCCSupport=1"
+            else:
+                # 未配置 UserID 时只探测主机连通性
+                url = auth_base
+            r = requests.get(url, timeout=5, allow_redirects=False)
             return True, f"连接成功 (HTTP {r.status_code})"
         except Exception as e:
             return False, str(e)
