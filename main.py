@@ -9,7 +9,7 @@ from iptv import constants
 from iptv.http_client import HttpClient
 from iptv.auth import Authenticator
 from iptv.key_manager import KeyManager
-from iptv.channel import ChannelCollector, merge_missing_4k, build_alias_map
+from iptv.channel import ChannelCollector, merge_missing_channels, build_alias_map
 from iptv.channel_info import ChannelInfoParser
 from iptv.mediacode import MediacodeCollector
 from iptv.epg import EPGCollector
@@ -130,9 +130,10 @@ def collect(allow_crack=True, force_refresh=False):
             channel_infos = ChannelInfoParser(logger).parse(html)
         logger.info(f"组播地址: {len(channel_infos)} 个")
 
-        # 4K 频道仅在 getchannellist 下发（channelList.jsp 无），注入缺失项，
-        # 使其参与后续 EPG 采集/图标/输出，M3U 带完整组播与回看地址
-        channels = merge_missing_4k(channels, channel_infos, logger)
+        # 4K 频道仅在 getchannellist 下发（channelList.jsp 无）；运营商上新频道时
+        # channelList 也可能滞后。注入缺失的有组播地址频道，使其参与后续
+        # EPG 采集/图标/输出，M3U 带完整组播与回看地址
+        channels = merge_missing_channels(channels, channel_infos, logger)
 
         # ========== 节目单 ==========
         # 同名变体备用 ID 映射: 高清 ID 在 tVod 无节目时回退 SD/其他变体 ID

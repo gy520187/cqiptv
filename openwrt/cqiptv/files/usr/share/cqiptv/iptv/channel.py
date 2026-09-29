@@ -124,11 +124,12 @@ def build_alias_map(pre_channels, channel_infos):
     return alias_map
 
 
-def merge_missing_4k(channels, channel_infos, logger):
+def merge_missing_channels(channels, channel_infos, logger):
     """
-    运营商 channelList.jsp 不含 4K 频道，仅在 getchannellistHWCTC.jsp 响应下发
-    （原始抓包证实：channelList 344 条无 4K，getchannellist 含北京卫视4K/广东卫视4K 等）。
-    将频道列表缺失的 4K 频道从 getchannellist 解析结果注入。
+    运营商 channelList.jsp 可能未及时包含 getchannellistHWCTC.jsp 下发的频道
+    （原始抓包证实 4K 频道仅在 getchannellist 下发；运营商上新频道时 channelList 也可能滞后）。
+    将频道列表缺失且有组播/回看地址的频道从 getchannellist 解析结果注入，
+    使其参与 EPG 采集、图标、存储与 M3U/XMLTV 输出。
     清洗后同名的只保留 UserChannelID 较小者（如 北京卫视4K. 与 北京卫视4K）。
     """
     if not channel_infos:
@@ -139,7 +140,10 @@ def merge_missing_4k(channels, channel_infos, logger):
     for cid, info in channel_infos.items():
         raw_name = info.get("channel_name", "")
         name = clean_channel_name(raw_name)
-        if not name or not is_4k_name(name):
+        if not name:
+            continue
+        # 无组播/回看地址的频道无实际播放意义，不注入
+        if not (info.get("channel_url") or info.get("timeshift_url")):
             continue
         # 排除名单在 filter_channels 阶段已生效，注入阶段同样拦截（如 江苏晚会4K）
         if raw_name in constants.EXCLUDE_CHANNELS or name in constants.EXCLUDE_CHANNELS:
@@ -160,7 +164,7 @@ def merge_missing_4k(channels, channel_infos, logger):
             "timeShift": info.get("timeshift"),
             "isTVOD": 1,
             "hasSubscrib": 1,
-            "category": "4K频道",
+            "category": "新增频道",
         })
     # 同名去重，保留 channelIndex 较小者
     by_name = {}
@@ -168,6 +172,6 @@ def merge_missing_4k(channels, channel_infos, logger):
         by_name.setdefault(normalize_channel_name(c["channelName"]), c)
     added = sorted(by_name.values(), key=lambda x: x["channelIndex"])
     if added:
-        logger.info(f"注入缺失 4K 频道 {len(added)} 个: "
+        logger.info(f"注入 channelList 缺失的频道 {len(added)} 个: "
                     + ", ".join(c["channelName"] for c in added))
     return channels + added
