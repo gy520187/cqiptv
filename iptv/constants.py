@@ -5,6 +5,11 @@
 部署相关的两项（ICON_HOST / WEB_PORT）可用环境变量覆盖，见 .env.example
 """
 import os
+import time
+
+# 统一使用北京时间，避免系统时区未配置时日志显示 UTC
+os.environ.setdefault("TZ", "Asia/Shanghai")
+time.tzset()
 
 # ========== 服务器地址 ==========
 DEFAULT_EPG_BASE = "http://192.0.2.10:33200/EPG/jsp"
