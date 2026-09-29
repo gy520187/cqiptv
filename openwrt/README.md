@@ -68,7 +68,7 @@ uclient-fetch -q --no-check-certificate -O - https://github.com/gy520187/cqiptv/
 uclient-fetch -q --no-check-certificate -O - https://github.com/gy520187/cqiptv/releases/download/v1.0.0/install.sh | sh -s update      # 更新到最新版
 uclient-fetch -q --no-check-certificate -O - https://github.com/gy520187/cqiptv/releases/download/v1.0.0/install.sh | sh -s reinstall   # 强制重装
 uclient-fetch -q --no-check-certificate -O - https://github.com/gy520187/cqiptv/releases/download/v1.0.0/install.sh | sh -s uninstall      # 卸载（保留 /etc/cqiptv 数据）
-uclient-fetch -q --no-check-certificate -O - https://github.com/gy520187/cqiptv/releases/download/v1.0.0/install.sh | sh -s uninstall-full # 卸载并删除 /etc/cqiptv 数据（不保留）
+uclient-fetch -q --no-check-certificate -O - https://github.com/gy520187/cqiptv/releases/download/v1.0.0/install.sh | sh -s uninstall-full # 卸载并清除全部数据（配置/M3U/EPG/图标及 UCI 配置）
 uclient-fetch -q --no-check-certificate -O - https://github.com/gy520187/cqiptv/releases/download/v1.0.0/install.sh | sh -s status      # 查看状态
 ```
 

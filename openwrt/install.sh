@@ -203,8 +203,11 @@ do_uninstall() {
     info "卸载软件包 ..."
     opkg remove luci-app-cqiptv cqiptv
     if [ "$purge" = "purge" ]; then
-        [ -d /etc/cqiptv ] && { info "删除运行时数据 /etc/cqiptv ..."; rm -rf /etc/cqiptv; }
-        info "卸载完成（数据已清除）。"
+        # 彻底删除：运行时数据目录（config.yaml、output m3u/epg、data/icon、data/epg_cache、log）
+        [ -d /etc/cqiptv ] && { info "删除运行时数据 /etc/cqiptv（配置/M3U/EPG/图标/日志）..."; rm -rf /etc/cqiptv; }
+        # UCI 配置（opkg 卸载默认保留 conffile，这里一并删除）
+        [ -f /etc/config/cqiptv ] && { info "删除 UCI 配置 /etc/config/cqiptv ..."; rm -f /etc/config/cqiptv; }
+        info "卸载完成（配置、M3U、EPG、图标等数据已全部清除）。"
     else
         info "卸载完成。"
         info "提示: 运行时数据保留在 /etc/cqiptv，彻底删除请执行: sh install.sh uninstall-full"
@@ -276,7 +279,7 @@ cqiptv OpenWrt 一键管理脚本
   update       更新到最新版
   reinstall    强制重装（覆盖已安装文件）
   uninstall    卸载（保留 /etc/cqiptv 数据）
-  uninstall-full 卸载并删除 /etc/cqiptv 数据（不保留）
+  uninstall-full 卸载并清除全部数据（配置/M3U/EPG/图标及 UCI 配置）
   status       查看环境/安装/服务状态
   help         显示本帮助
 
