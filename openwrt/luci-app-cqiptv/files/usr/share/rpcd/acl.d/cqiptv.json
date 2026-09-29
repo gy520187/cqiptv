@@ -1,0 +1,15 @@
+{
+	"luci-app-cqiptv": {
+		"description": "Grant access to cqiptv management",
+		"read": {
+			"ubus": {
+				"luci.cqiptv": [ "status" ]
+			}
+		},
+		"write": {
+			"ubus": {
+				"luci.cqiptv": [ "collect" ]
+			}
+		}
+	}
+}

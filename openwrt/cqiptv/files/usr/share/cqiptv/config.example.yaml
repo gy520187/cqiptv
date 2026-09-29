@@ -1,0 +1,17 @@
+# ========== IPTV 认证配置 ==========
+# 仅需填写以下内容，其余配置写死在脚本中（iptv/constants.py）
+# 下方注释中的示例均为虚拟占位值，请替换为从机顶盒抓包获取的真实参数
+
+AuthenticationIP: ""    # 认证服务器地址，如 http://192.0.2.10:33200/EPG/jsp
+UserID: ""              # 用户账号，如 1234567890@itv
+mac: ""                 # MAC 地址，如 AA:BB:CC:DD:EE:FF
+STBID: ""               # 机顶盒序列号，如 00000000000000000000000000000000
+STBType: ""             # 机顶盒型号，如 ExampleBox_pub_cqydx
+STBVersion: ""          # 机顶盒版本，如 V0000000P0000
+SoftwareVersion: ""     # 软件版本，如 1.0.0-EXAMPLE.B001
+Authenticator: ""       # 抓包获取的 Authenticator（十六进制）
+key: ""                 # 3DES 密钥（破解成功后自动回写）
+
+# ========== 定时任务 ==========
+scheduler_enabled: true    # 是否启用定时采集（可在 Web「定时任务」页修改）
+scheduler_cron: "0 4 * * *"   # cron 表达式，默认每天 04:00 采集

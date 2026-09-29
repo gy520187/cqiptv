@@ -1,0 +1,10 @@
+config cqiptv 'web'
+	option port '6060'
+	option auth ''
+	option icon_host 'http://192.168.1.1:6060'
+	option epg_url ''
+	option epg_workers '2'
+
+config cqiptv 'scheduler'
+	option enabled '0'
+	option cron '0 4 * * *'

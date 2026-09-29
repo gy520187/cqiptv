@@ -1,0 +1,12 @@
+{
+	"admin/services/cqiptv": {
+		"title": "IPTV 采集",
+		"action": {
+			"type": "view",
+			"path": "cqiptv/overview"
+		},
+		"depends": {
+			"acl": [ "luci-app-cqiptv" ]
+		}
+	}
+}

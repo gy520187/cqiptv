@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}EPG{% endblock %}
+{% block content %}
+<h1>EPG 节目单</h1>
+<div class="epg-layout">
+    <aside class="epg-side" id="epg-side"></aside>
+    <div class="epg-main">
+        <div class="epg-channels" id="epg-channels">
+            <span style="color:var(--text-secondary);font-size:13px">正在加载频道...</span>
+        </div>
+        <div class="table">
+            <table class="table">
+                <thead><tr><th>开始时间</th><th>结束时间</th><th>节目</th></tr></thead>
+                <tbody id="epg-tbody"><tr><td colspan="3" style="color:var(--text-secondary)">请选择频道</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+const GROUP_ORDER = ['央视频道', '卫视频道', '重庆本地', '4K频道',
+    '剧场电影', '少儿卡通', '付费专题', '教育', '其他'];
+
+let groups = {};        // group -> [channel]
+let currentGroup = '';
+let currentCid = '';
+let epgData = [];
+
+async function loadAllChannels() {
+    const all = [];
+    for (let page = 1; page <= 20; page++) {
+        const r = await fetch(`/api/channels?page=${page}&size=500`);
+        const d = await r.json();
+        all.push(...d.items);
+        if (d.page * d.size >= d.total) break;
+    }
+    groups = {};
+    all.forEach(c => {
+        const g = c.group || '其他';
+        (groups[g] = groups[g] || []).push(c);
+    });
+    // 频道名排序（同分组内按台号排序）
+    Object.values(groups).forEach(list =>
+        list.sort((a, b) => (a.channelIndex || 0) - (b.channelIndex || 0)));
+    renderGroups();
+    const firstGroup = GROUP_ORDER.find(g => groups[g] && groups[g].length);
+    if (firstGroup) {
+        selectGroup(firstGroup);
+        selectChannel(groups[firstGroup][0].channelID);
+    }
+}
+
+function renderGroups() {
+    const side = document.getElementById('epg-side');
+    side.innerHTML = '';
+    GROUP_ORDER.forEach(g => {
+        const list = groups[g];
+        if (!list || !list.length) return;
+        const btn = document.createElement('button');
+        btn.className = 'group-btn' + (g === currentGroup ? ' active' : '');
+        btn.textContent = `${g} (${list.length})`;
+        btn.onclick = () => selectGroup(g);
+        side.appendChild(btn);
+    });
+    if (!side.children.length) {
+        side.innerHTML = '<span style="font-size:12px;color:var(--text-secondary)">暂无频道</span>';
+    }
+}
+
+function selectGroup(g) {
+    currentGroup = g;
+    const box = document.getElementById('epg-channels');
+    box.innerHTML = '';
+    (groups[g] || []).forEach(c => {
+        const b = document.createElement('button');
+        b.className = 'ch-link' + (c.channelID === currentCid ? ' active' : '');
+        b.textContent = `${c.channelIndex}. ${c.channelName}`;
+        b.dataset.cid = c.channelID;
+        b.onclick = () => selectChannel(c.channelID);
+        box.appendChild(b);
+    });
+    renderGroups();
+}
+
+async function selectChannel(cid) {
+    currentCid = cid;
+    document.querySelectorAll('#epg-channels .ch-link').forEach(b => {
+        b.classList.toggle('active', b.dataset.cid === cid);
+    });
+    const r = await fetch('/api/epg?channel_id=' + encodeURIComponent(cid));
+    const d = await r.json();
+    epgData = [];
+    (d.programs || []).forEach(page => {
+        (page || []).forEach(p => { if (p) epgData.push(p); });
+    });
+    renderEpg();
+}
+
+function fmt14(s) {
+    if (!s || s.length < 12) return s || '-';
+    return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)} ${s.slice(8, 10)}:${s.slice(10, 12)}`;
+}
+
+function esc(s) {
+    return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function renderEpg() {
+    const tbody = document.getElementById('epg-tbody');
+    if (!epgData.length) {
+        tbody.innerHTML = '<tr><td colspan="3" style="color:var(--text-secondary)">该频道暂无节目单</td></tr>';
+        return;
+    }
+    const now = new Date();
+    const nowStr = now.getFullYear() * 100000000 +
+        (now.getMonth() + 1) * 1000000 + now.getDate() * 10000 +
+        now.getHours() * 100 + now.getMinutes();
+    tbody.innerHTML = '';
+    epgData.forEach(p => {
+        const tr = document.createElement('tr');
+        const isNow = nowStr >= +(p.beginTimeFormat || 0) && nowStr < +(p.endTimeFormat || 0);
+        tr.innerHTML = `<td class="epg-time">${fmt14(p.beginTimeFormat)}</td>
+            <td class="epg-time">${fmt14(p.endTimeFormat)}</td>
+            <td class="${isNow ? 'epg-now' : ''}">${esc(p.programName)}</td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+loadAllChannels();
+</script>
+{% endblock %}

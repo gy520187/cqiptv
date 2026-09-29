@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}频道{% endblock %}
+{% block content %}
+<h1>频道列表</h1>
+<div class="toolbar">
+    <input id="kw" placeholder="搜索频道名..." onkeydown="if(event.key==='Enter')loadChannels(1)">
+    <select id="cat"><option value="">全部栏目</option></select>
+    <button class="btn btn-primary" onclick="loadChannels(1)">搜索</button>
+</div>
+<table class="table">
+    <thead><tr><th>台号</th><th>频道名</th><th>RTSP 链接</th><th>RTP 链接</th></tr></thead>
+    <tbody id="ch-tbody"></tbody>
+</table>
+<div class="pagination" id="pager"></div>
+{% endblock %}
+
+{% block script %}
+<script>
+let curPage = 1;
+
+async function loadCategories() {
+    const r = await fetch('/api/channels?page=1&size=500');
+    const d = await r.json();
+    const cats = [...new Set(d.items.map(c => c.category).filter(Boolean))].sort();
+    const sel = document.getElementById('cat');
+    cats.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        sel.appendChild(opt);
+    });
+}
+
+function urlCell(url) {
+    if (!url) return '<span class="url-empty">-</span>';
+    const esc = url.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return `<span class="url-cell" title="${esc}" onclick="copyText('${esc.replace(/'/g, "\\'")}')">${esc}</span>';
+}
+
+function esc(s) {
+    return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+async function loadChannels(page) {
+    curPage = page;
+    const kw = document.getElementById('kw').value;
+    const cat = document.getElementById('cat').value;
+    const r = await fetch(`/api/channels?page=${page}&size=50&keyword=${encodeURIComponent(kw)}&category=${encodeURIComponent(cat)}`);
+    const d = await r.json();
+    const tbody = document.getElementById('ch-tbody');
+    tbody.innerHTML = '';
+    d.items.forEach(c => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${esc(c.channelIndex)}</td>
+            <td>${esc(c.channelName)}</td>
+            <td>${urlCell(c.rtsp_url)}</td>
+            <td>${urlCell(c.rtp_url)}</td>`;
+        tbody.appendChild(tr);
+    });
+    renderPager(d.total, d.page, d.size);
+}
+
+function renderPager(total, page, size) {
+    const pages = Math.ceil(total / size);
+    const pager = document.getElementById('pager');
+    pager.innerHTML = `共 ${total} 条，${pages} 页 `;
+    const start = Math.max(1, page - 4);
+    const end = Math.min(pages, start + 9);
+    for (let i = start; i <= end; i++) {
+        const b = document.createElement('button');
+        b.textContent = i;
+        b.className = i === page ? 'active' : '';
+        b.onclick = () => loadChannels(i);
+        pager.appendChild(b);
+    }
+}
+
+loadCategories();
+loadChannels(1);
+</script>
+{% endblock %}

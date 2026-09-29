@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}密钥{% endblock %}
+{% block content %}
+<h1>密钥破解</h1>
+<div class="form">
+    <label>起始<input id="start" type="number" value="0"></label>
+    <label>结束<input id="end" type="number" value="100000000"></label>
+    <label>进程<input id="workers" type="number" value="8"></label>
+    <button class="btn btn-danger" onclick="startCrack()">开始破解</button>
+</div>
+<div class="progress">
+    <div class="progress-msg" id="crack-msg">就绪</div>
+    <div class="progress-bar"><div id="crack-bar"></div></div>
+    <pre id="crack-found" class="crack-found"></pre>
+</div>
+<h2>当前密钥</h2>
+<div id="cur-key" class="key-box">-</div>
+{% endblock %}
+
+{% block script %}
+<script>
+async function startCrack() {
+    const body = {
+        start: +document.getElementById('start').value,
+        end: +document.getElementById('end').value,
+        workers: +document.getElementById('workers').value,
+    };
+    const r = await fetch('/api/crack', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (d.ok) { toast('破解已启动'); watchCrack(); }
+    else { toast('破解进行中'); }
+}
+function watchCrack() {
+    const es = new EventSource('/api/crack/progress');
+    es.onmessage = (e) => {
+        const p = JSON.parse(e.data);
+        document.getElementById('crack-msg').textContent = p.msg;
+        const pct = p.total > 0 ? (p.current / p.total * 100) : 0;
+        document.getElementById('crack-bar').style.width = pct + '%';
+        if (p.found && p.found.length) {
+            document.getElementById('crack-found').textContent =
+                p.found.map(f => JSON.stringify(f, null, 2)).join('\n');
+        }
+        if (p.done) { es.close(); loadKey(); }
+    };
+}
+async function loadKey() {
+    const r = await fetch('/api/status');
+    const d = await r.json();
+    document.getElementById('cur-key').textContent = d.key;
+}
+loadKey();
+</script>
+{% endblock %}

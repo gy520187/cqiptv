@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}配置{% endblock %}
+{% block content %}
+<h1>配置管理</h1>
+<div class="toolbar">
+    <button class="btn btn-default" onclick="loadConfig()">刷新</button>
+    <button class="btn btn-primary" onclick="saveConfig()">保存</button>
+    <button class="btn btn-default" onclick="testConfig()">测试连接</button>
+</div>
+<pre id="config-editor" class="config-editor" contenteditable="true"></pre>
+{% endblock %}
+
+{% block script %}
+<script>
+async function loadConfig() {
+    const r = await fetch('/api/config');
+    const d = await r.json();
+    document.getElementById('config-editor').textContent = JSON.stringify(d, null, 2);
+}
+async function saveConfig() {
+    const text = document.getElementById('config-editor').textContent;
+    let data;
+    try { data = JSON.parse(text); }
+    catch (e) { toast('JSON 格式错误'); return; }
+    const r = await fetch('/api/config/save', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data),
+    });
+    const d = await r.json();
+    toast(d.ok ? '保存成功' : '保存失败: ' + d.msg);
+}
+async function testConfig() {
+    const r = await fetch('/api/config/test', {method: 'POST'});
+    const d = await r.json();
+    toast(d.ok ? '连接成功: ' + d.msg : '连接失败: ' + d.msg);
+}
+loadConfig();
+</script>
+{% endblock %}
