@@ -106,6 +106,8 @@ sh /tmp/cqiptv-install.sh uninstall    # 卸载（保留 /etc/cqiptv 数据）
 sh /tmp/cqiptv-install.sh status      # 查看环境/安装/服务状态
 ```
 
+**端口说明**：OpenWrt 版 Web 服务固定使用 **6061** 端口（Docker/本地版为 6060，避免同一局域网冲突）。LuCI 页面跨端口调用 `http://<路由器IP>:6061`，播放器订阅地址相应使用 6061。
+
 备选：手动下载安装（推荐使用 `curl`，能可靠跟随 GitHub 下载重定向）：
 
 ```bash

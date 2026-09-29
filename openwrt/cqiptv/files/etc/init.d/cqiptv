@@ -23,9 +23,9 @@ start_service() {
     config_load 'cqiptv'
     local port web_auth icon_host epg_url epg_workers
     local sched_enabled cron
-    config_get port 'web' 'port' '6060'
+    config_get port 'web' 'port' '6061'
     config_get web_auth 'web' 'auth' ''
-    config_get icon_host 'web' 'icon_host' 'http://192.168.1.1:6060'
+    config_get icon_host 'web' 'icon_host' 'http://192.168.1.1:6061'
     config_get epg_url 'web' 'epg_url' ''
     config_get epg_workers 'web' 'epg_workers' '2'
     config_get sched_enabled 'scheduler' 'enabled' '0'

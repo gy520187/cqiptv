@@ -49,7 +49,7 @@ EXCLUDE_CHANNELS = {"江苏晚会4K", "江苏晚会4k", "重庆卫视频道"}
 # ========== 图标 ==========
 # 注意: icon.py 中实际使用 gh-proxy 加速的 FANMINGMING_BASE，此路径常量仅供部署参考
 ICON_DIR = "data/icon"
-ICON_HOST = os.getenv("ICON_HOST", "http://your-server:6060")   # M3U 引用的图标地址，改成播放器可达的服务器地址
+ICON_HOST = os.getenv("ICON_HOST", "http://your-server:6061")   # M3U 引用的图标地址，改成播放器可达的服务器地址
 EPG_URL = os.getenv("EPG_URL") or f"{ICON_HOST}/epg.xml.gz"     # M3U 头部 x-tvg-url 指向的节目单地址，留空默认 ICON_HOST/epg.xml.gz（gzip 版体积约为 xml 的 1/10）
 ICON_FORCE = False
 
@@ -77,7 +77,7 @@ CRACK_WRITE_BACK = True
 
 # ========== Web ==========
 WEB_HOST = "0.0.0.0"
-WEB_PORT = int(os.getenv("WEB_PORT") or "6060")
+WEB_PORT = int(os.getenv("WEB_PORT") or "6061")
 
 # ========== 定时任务 ==========
 # 支持环境变量覆盖（OpenWrt 打包时由 UCI 配置导出）

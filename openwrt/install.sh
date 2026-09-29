@@ -150,10 +150,10 @@ do_status() {
     else
         echo "开机自启: 未启用"
     fi
-    if command -v netstat >/dev/null 2>&1 && netstat -ltn 2>/dev/null | grep -q ':6060'; then
-        echo "Web 服务: 运行中 (端口 6060)"
+    if command -v netstat >/dev/null 2>&1 && netstat -ltn 2>/dev/null | grep -q ':6061'; then
+        echo "Web 服务: 运行中 (端口 6061)"
     else
-        echo "Web 服务: 未检测到 6060 端口监听"
+        echo "Web 服务: 未检测到 6061 端口监听"
     fi
 }
 

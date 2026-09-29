@@ -3,7 +3,7 @@
 'require ui';
 
 function apiBase() {
-    return 'http://' + (window.location.hostname || 'localhost') + ':6060';
+    return 'http://' + (window.location.hostname || 'localhost') + ':6061';
 }
 
 function api(path, opts) {

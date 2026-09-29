@@ -1,7 +1,7 @@
 config cqiptv 'web'
-	option port '6060'
+	option port '6061'
 	option auth ''
-	option icon_host 'http://192.168.1.1:6060'
+	option icon_host 'http://192.168.1.1:6061'
 	option epg_url ''
 	option epg_workers '2'
 

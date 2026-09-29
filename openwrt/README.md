@@ -99,9 +99,9 @@ LuCI 菜单「服务 -> IPTV 采集」即可打开管理页。
 
 ```
 config cqiptv 'web'
-	option port '6060'                      # Flask 服务端口
+	option port '6061'                      # Flask 服务端口（OpenWrt 版固定 6061，与 Docker 版 6060 区分）
 	option auth 'user:password'             # 可选 Basic 认证，留空不启用
-	option icon_host 'http://192.168.1.1:6060'  # M3U 图标地址（改路由器实际 IP）
+	option icon_host 'http://192.168.1.1:6061'  # M3U 图标地址（改路由器实际 IP）
 	option epg_url ''                       # M3U x-tvg-url，留空用默认
 	option epg_workers '2'                  # EPG 并行线程数
 
@@ -125,12 +125,12 @@ config cqiptv 'scheduler'
 
 ## 注意事项
 
-- LuCI 页面通过 `http://<路由器IP>:6060` 跨端口调用 Flask API。
-  请使用 **HTTP** 访问 LuCI（OpenWrt 默认），若启用 HTTPS 需为 6060 配置反向代理，
+- LuCI 页面通过 `http://<路由器IP>:6061` 跨端口调用 Flask API。
+  请使用 **HTTP** 访问 LuCI（OpenWrt 默认），若启用 HTTPS 需为 6061 配置反向代理，
   否则浏览器会阻止混合内容。
-- 若从公网访问，请在防火墙放行 6060 端口并设置 `auth`（Basic 认证）。
-- 输出文件的播放器订阅地址：`http://<路由器IP>:6060/playlist.m3u`、
-  `http://<路由器IP>:6060/epg.xml.gz`。
+- 若从公网访问，请在防火墙放行 6061 端口并设置 `auth`（Basic 认证）。
+- 输出文件的播放器订阅地址：`http://<路由器IP>:6061/playlist.m3u`、
+  `http://<路由器IP>:6061/epg.xml.gz`。
 
 ## 版本更新
 
