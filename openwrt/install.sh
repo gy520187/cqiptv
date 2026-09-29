@@ -74,8 +74,8 @@ do_install() {
     check_env
     if is_installed cqiptv && is_installed luci-app-cqiptv; then
         warn "已安装 cqiptv / luci-app-cqiptv。"
-        warn "如需更新请执行: sh $0 update"
-        warn "如需强制重装请执行: sh $0 reinstall"
+        warn "如需更新请执行: sh install.sh update"
+        warn "如需强制重装请执行: sh install.sh reinstall"
         return 0
     fi
     info "opkg update ..."
