@@ -52,6 +52,7 @@ return view.extend({
             '    </table>',
             '  </div>',
             '  <div class="cbi-page-actions">',
+            '    <a id="cq-btn-web" class="btn cbi-button-action" target="_blank" rel="noopener">访问 Web 界面</a>',
             '    <button id="cq-btn-collect" class="btn cbi-button-action">立即采集</button>',
             '    <button id="cq-btn-refresh" class="btn cbi-button-action">强制刷新 EPG</button>',
             '  </div>',
@@ -78,6 +79,7 @@ return view.extend({
 
     bindActions: function() {
         var self = this;
+        this.rootEl.querySelector('#cq-btn-web').href = apiBase() + '/';
         this.rootEl.querySelector('#cq-btn-collect').addEventListener('click', function() {
             self.startCollect(false);
         });

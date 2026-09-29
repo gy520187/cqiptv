@@ -31,17 +31,11 @@ start_service() {
     config_get sched_enabled 'scheduler' 'enabled' '0'
     config_get cron 'scheduler' 'cron' '0 4 * * *'
 
-    # APScheduler / tzlocal 不在 OpenWrt 官方源，已捆绑到 vendor
-    export PYTHONPATH="$APP_DIR/vendor"
-    export WEB_PORT="$port"
-    export WEB_AUTH="$web_auth"
-    export ICON_HOST="$icon_host"
-    export EPG_URL="$epg_url"
-    export EPG_WORKERS="$epg_workers"
-    export TZ='Asia/Shanghai'
-
+    # APScheduler / tzlocal / blinker 不在 OpenWrt 官方源，已捆绑到 vendor
+    # 注意：必须用 procd_set_param env 传给子进程，仅 export 不会进入 procd 环境
     procd_open_instance
     procd_set_param command "$PYTHON" "$APP_DIR/server.py"
+    procd_set_param env PYTHONPATH="$APP_DIR/vendor" WEB_PORT="$port" WEB_AUTH="$web_auth" ICON_HOST="$icon_host" EPG_URL="$epg_url" EPG_WORKERS="$epg_workers" TZ='Asia/Shanghai'
     procd_set_param file "$WORK_DIR/config.yaml"
     procd_set_param respawn
     procd_set_param stdout 1
@@ -49,10 +43,9 @@ start_service() {
     procd_close_instance
 
     if [ "$sched_enabled" = "1" ]; then
-        export SCHEDULER_ENABLED=1
-        export SCHEDULER_CRON="$cron"
         procd_open_instance
         procd_set_param command "$PYTHON" "$APP_DIR/scheduler.py"
+        procd_set_param env PYTHONPATH="$APP_DIR/vendor" SCHEDULER_ENABLED=1 SCHEDULER_CRON="$cron" WEB_PORT="$port" WEB_AUTH="$web_auth" ICON_HOST="$icon_host" EPG_URL="$epg_url" EPG_WORKERS="$epg_workers" TZ='Asia/Shanghai'
         procd_set_param file "$WORK_DIR/config.yaml"
         procd_set_param respawn
         procd_set_param stdout 1
