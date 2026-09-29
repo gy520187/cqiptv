@@ -17,6 +17,7 @@ from iptv.xmltv import XMLTVGenerator
 from iptv.m3u_normalized import NormalizedM3UGenerator
 from iptv.icon import IconHandler
 from iptv.storage import Storage
+from iptv.utils import mask_secret
 
 
 def collect(allow_crack=True, force_refresh=False):
@@ -36,7 +37,8 @@ def collect(allow_crack=True, force_refresh=False):
         key = km.get_or_crack(allow_crack=allow_crack)
         if key:
             for k, v in km.decrypt_info(key).items():
-                logger.info(f"  {k}: {v}")
+                # 解密信息含 token/user_id/stb_id/mac 等凭据，公网日志可见，必须脱敏
+                logger.info(f"  {k}: {mask_secret(v)}")
 
         # ========== HTTP ==========
         http = HttpClient(cfg, logger)

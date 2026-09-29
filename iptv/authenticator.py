@@ -9,6 +9,7 @@ except ImportError:
     HAS_CRYPTO = False
 
 from multiprocessing import Pool
+from .utils import mask_secret
 
 
 class AuthenticatorCrypto:
@@ -104,7 +105,7 @@ class AuthenticatorBruteforcer:
                 plain = crypto.decrypt(authenticator)
                 if self._looks_valid(plain):
                     info = AuthenticatorCrypto.parse_decrypted(plain)
-                    self.logger.info(f"  命中 key={key}")
+                    self.logger.info(f"  命中 key={mask_secret(key)}")
                     found.append({"key": key, "plain": plain, "info": info})
                     if len(found) >= max_found:
                         break

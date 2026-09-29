@@ -1,6 +1,7 @@
 # iptv/key_manager.py
 from .authenticator import AuthenticatorBruteforcer, AuthenticatorCrypto
 from . import constants
+from .utils import mask_secret
 
 
 class KeyManager:
@@ -10,7 +11,7 @@ class KeyManager:
     def get_or_crack(self, allow_crack=True):
         key = self.cfg.key
         if key:
-            self.logger.info(f"使用配置中的 key: {key}")
+            self.logger.info(f"使用配置中的 key: {mask_secret(key)}")
             if self._verify(key):
                 return key
             self.logger.warning("key 校验失败，重新破解")
@@ -40,7 +41,7 @@ class KeyManager:
             return None
 
         best = results[0]["key"]
-        self.logger.info(f"破解成功: {best}")
+        self.logger.info(f"破解成功: {mask_secret(best)}")
         if constants.CRACK_WRITE_BACK:
             self.cfg.set_key(best, write_back=True)
         return best

@@ -2,7 +2,7 @@
 import json
 import re
 from . import constants
-from .utils import clean_channel_name, normalize_channel_name
+from .utils import clean_channel_name, normalize_channel_name, mask_secret
 
 
 class ChannelCollector:
@@ -10,9 +10,9 @@ class ChannelCollector:
         self.cfg, self.http, self.logger = cfg, http, logger
 
     def fetch(self):
-        # ★ 调试：打印当前 session 里的 cookies
+        # ★ 调试：打印当前 session 里的 cookies（脱敏，避免凭据落盘）
         cookies = self.http.session.cookies.get_dict()
-        self.logger.info(f"fetch 前 cookies: {cookies}")
+        self.logger.info(f"fetch 前 cookies: { {k: mask_secret(v) for k, v in cookies.items()} }")
 
         self.logger.info("拉取频道列表...")
         params = {

@@ -2,6 +2,19 @@
 import re
 
 
+def mask_secret(value) -> str:
+    """敏感值脱敏：保留前 2 位与后 2 位，中间用 * 填充。
+    短于 6 位时全部打码，避免泄露长度之外的实质内容。"""
+    s = str(value)
+    if not s:
+        return ""
+    if len(s) <= 4:
+        return "*" * len(s)
+    if len(s) <= 6:
+        return s[:1] + "*" * (len(s) - 2) + s[-1:]
+    return s[:2] + "*" * (len(s) - 4) + s[-2:]
+
+
 def clean_channel_name(name: str) -> str:
     """清洗频道名（去末尾符号 + 去多余空格）"""
     if not name:

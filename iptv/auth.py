@@ -23,6 +23,7 @@ from urllib.parse import urlparse
 
 from . import constants
 from .authenticator import AuthenticatorCrypto
+from .utils import mask_secret
 
 
 class Authenticator:
@@ -73,7 +74,7 @@ class Authenticator:
                 # 与原始抓包一致：FCCSupport=1，Referer 指向 epg.itv.cq.cn 入口页
                 self.logger.info(f"步骤1: 认证入口 (尝试 {attempt+1}/3)")
                 url = f"{auth_base}/EDS/jsp/AuthenticationURL?UserID={user_id}&Action=Login&FCCSupport=1"
-                self.logger.info(f"  认证 URL: {url}")
+                self.logger.info(f"  认证 URL: {url.replace(user_id, mask_secret(user_id))}")
 
                 headers = {
                     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -118,14 +119,14 @@ class Authenticator:
                 if not m:
                     raise ValueError("无法找到 EncryptToken")
                 encrypt_token = m.group(1)
-                self.logger.info(f"  EncryptToken: {encrypt_token}")
+                self.logger.info(f"  EncryptToken: {mask_secret(encrypt_token)}")
 
                 # 提取 userToken
                 m = re.search(r'document\.authform\.userToken\.value\s*=\s*"([^"]+)"', ar.text)
                 if not m:
                     raise ValueError("无法找到 userToken")
                 user_token = m.group(1)
-                self.logger.info(f"  userToken: {user_token}")
+                self.logger.info(f"  userToken: {mask_secret(user_token)}")
 
                 # ========== 步骤3: 生成 Authenticator ==========
                 self.logger.info("步骤3: 生成 Authenticator")
@@ -133,7 +134,7 @@ class Authenticator:
 
                 # ★ 照抄可用脚本：明文 = {key}$EncryptToken$UserID$STBID$ip$mac$$CTC
                 auth_str = f"{key}${encrypt_token}${user_id}${stb_id}${ip}${mac}$$CTC"
-                self.logger.info(f"  明文: {auth_str[:80]}...")
+                self.logger.info(f"  明文: {len(auth_str)} 字符（内容已脱敏）")
 
                 authenticator = pc.encrypt(auth_str)
                 self.logger.info(f"  密文: {authenticator[:32]}...")
@@ -197,8 +198,8 @@ class Authenticator:
 
                 # ========== 步骤5: 提取 UserToken 和 stbid ==========
                 cookies = self.http.session.cookies.get_dict()   # ★ 从 session 拿
-                self.logger.info(f"  JSESSIONID: {cookies.get('JSESSIONID')}")
-                self.logger.info(f"  Cookie: {cookies}")
+                self.logger.info(f"  JSESSIONID: {mask_secret(cookies.get('JSESSIONID'))}")
+                self.logger.info(f"  Cookie: { {k: mask_secret(v) for k, v in cookies.items()} }")
 
                 # 提取 UserToken
                 m = re.search(r'name="UserToken"\s*value="([^"]+)"', vr.text)
@@ -216,15 +217,15 @@ class Authenticator:
                 if not temp_key:
                     m = re.search(r'tempKey\s*[=:]\s*["\']?([0-9A-Fa-f]{16,64})', ar.text)
                     temp_key = m.group(1) if m else ""
-                self.logger.info(f"  tempKey: {temp_key or '（响应中未找到，按空值提交）'}")
+                self.logger.info(f"  tempKey: {mask_secret(temp_key) or '（响应中未找到，按空值提交）'}")
 
                 if not resp_user_token or not resp_stbid:
                     self.logger.error("无法从 HTML 中提取 UserToken 或 stbid")
                     self.logger.debug(f"  响应前 500 字: {vr.text[:500]}")
                     return None
 
-                self.logger.info(f"  UserToken: {resp_user_token}")
-                self.logger.info(f"  stbid: {resp_stbid}")
+                self.logger.info(f"  UserToken: {mask_secret(resp_user_token)}")
+                self.logger.info(f"  stbid: {mask_secret(resp_stbid)}")
 
                 # ★ 验证 session 里有 JSESSIONID
                 if not cookies.get("JSESSIONID"):
@@ -232,7 +233,7 @@ class Authenticator:
                     m_cookie = re.search(r'JSESSIONID="?([^";]+)"?', vr.headers.get("Set-Cookie", ""))
                     if m_cookie:
                         self.http.session.cookies.set("JSESSIONID", m_cookie.group(1))
-                        self.logger.info(f"  从响应头提取: {m_cookie.group(1)}")
+                        self.logger.info(f"  从响应头提取: {mask_secret(m_cookie.group(1))}")
 
                 return self.host, cookies, resp_user_token, resp_stbid, temp_key
 
