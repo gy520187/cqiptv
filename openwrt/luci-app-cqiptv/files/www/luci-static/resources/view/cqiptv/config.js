@@ -22,6 +22,26 @@ function esc(s) {
         .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+var CQ_STYLE = [
+    '.cq-page{display:flex;flex-direction:column;gap:16px}',
+    '.cq-card{background:rgba(127,127,127,.06);border:1px solid rgba(127,127,127,.22);border-radius:10px;padding:16px}',
+    '.cq-hero-head{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(127,127,127,.18);padding-bottom:10px}',
+    '.cq-hero-head h3{margin:0;font-size:15px;font-weight:600}',
+    '.cq-hint{color:#999;font-size:12px}',
+    '.cq-fields{display:grid;grid-template-columns:repeat(2,1fr);gap:14px 20px;margin:16px 0}',
+    '@media(max-width:900px){.cq-fields{grid-template-columns:1fr}}',
+    '.cq-field{display:flex;flex-direction:column;gap:6px}',
+    '.cq-label{font-size:13px;color:#888;font-weight:500}',
+    '.cq-input{width:100%;box-sizing:border-box}',
+    '.cq-result{margin:12px 0;padding:10px 12px;border-radius:6px;font-size:13px;display:none}',
+    '.cq-result.cq-ok{display:block;background:rgba(46,160,67,.12);border:1px solid rgba(46,160,67,.4);color:#2ea043}',
+    '.cq-result.cq-err{display:block;background:rgba(220,50,47,.12);border:1px solid rgba(220,50,47,.4);color:#dc322f}',
+    '.cq-actions{display:flex;gap:8px;flex-wrap:wrap}',
+    '.cq-btn{border-radius:6px}',
+    '.cq-btn-primary{font-weight:600}',
+    ''
+].join('');
+
 var FIELDS = [
     { name: 'AuthenticationIP', label: '认证服务器地址 (AuthenticationIP)', placeholder: 'http://192.0.2.10:33200/EPG/jsp' },
     { name: 'UserID', label: '用户账号 (UserID)', placeholder: '1234567890@itv' },
@@ -38,22 +58,27 @@ return view.extend({
     render: function() {
         var el = document.createElement('div');
         var rows = FIELDS.map(function(f) {
-            return '<tr><th width="30%">' + esc(f.label) + '</th>' +
-                '<td><input id="cfg-' + f.name + '" class="cbi-input-text" type="text" ' +
-                'placeholder="' + esc(f.placeholder) + '" style="width:95%"></td></tr>';
+            return '<div class="cq-field">' +
+                '<label class="cq-label" for="cfg-' + f.name + '">' + esc(f.label) + '</label>' +
+                '<input id="cfg-' + f.name + '" class="cbi-input-text cq-input" type="text" ' +
+                'placeholder="' + esc(f.placeholder) + '" autocomplete="off">' +
+                '</div>';
         }).join('');
 
         el.innerHTML = [
-            '<div class="cbi-section">',
-            '  <h3>IPTV 认证配置</h3>',
-            '  <div class="cbi-section-node">',
-            '    <table class="table" width="100%">',
-            rows,
-            '    </table>',
-            '  </div>',
-            '  <div class="cbi-page-actions">',
-            '    <button id="cq-btn-test" class="btn cbi-button-action">连接测试</button>',
-            '    <button id="cq-btn-save" class="btn cbi-button-action">保存配置</button>',
+            '<style>' + CQ_STYLE + '</style>',
+            '<div class="cq-page">',
+            '  <div class="cq-card">',
+            '    <div class="cq-hero-head">',
+            '      <h3>IPTV 认证配置</h3>',
+            '      <span class="cq-hint">key / Authenticator 脱敏显示，含 * 表示未修改</span>',
+            '    </div>',
+            '    <div class="cq-fields">' + rows + '</div>',
+            '    <div id="cq-result" class="cq-result"></div>',
+            '    <div class="cq-actions">',
+            '      <button id="cq-btn-test" class="btn cbi-button-action cq-btn">连接测试</button>',
+            '      <button id="cq-btn-save" class="btn cbi-button-action cq-btn cq-btn-primary">保存配置</button>',
+            '    </div>',
             '  </div>',
             '</div>'
         ].join('');
@@ -82,7 +107,7 @@ return view.extend({
                 if (input) input.value = (d[f.name] != null) ? String(d[f.name]) : '';
             });
         }).catch(function(err) {
-            ui.addNotification(null, '加载配置失败: ' + err);
+            self.showResult('加载配置失败: ' + err, false);
         });
     },
 
@@ -97,11 +122,11 @@ return view.extend({
         btn.disabled = true;
         api('/api/config/save', { method: 'POST', body: data })
             .then(function(d) {
-                ui.addNotification(null, d.msg || (d.ok ? '保存成功' : '保存失败'));
+                self.showResult(d.msg || (d.ok ? '保存成功' : '保存失败'), !!d.ok);
                 if (d.ok) self.loadConfig();
             })
             .catch(function(err) {
-                ui.addNotification(null, '保存失败: ' + err);
+                self.showResult('保存失败: ' + err, false);
             })
             .then(function() {
                 btn.disabled = false;
@@ -109,17 +134,24 @@ return view.extend({
     },
 
     test: function() {
+        var self = this;
         var btn = this.rootEl.querySelector('#cq-btn-test');
         btn.disabled = true;
         api('/api/config/test', { method: 'POST', body: {} })
             .then(function(d) {
-                ui.addNotification(null, d.msg || (d.ok ? '连接成功' : '连接失败'));
+                self.showResult(d.msg || (d.ok ? '连接成功' : '连接失败'), !!d.ok);
             })
             .catch(function(err) {
-                ui.addNotification(null, '测试失败: ' + err);
+                self.showResult('测试失败: ' + err, false);
             })
             .then(function() {
                 btn.disabled = false;
             });
+    },
+
+    showResult: function(msg, ok) {
+        var box = this.rootEl.querySelector('#cq-result');
+        box.textContent = msg || '';
+        box.className = 'cq-result ' + (ok ? 'cq-ok' : 'cq-err');
     }
 });
