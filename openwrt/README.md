@@ -47,6 +47,39 @@ make package/luci-app-cqiptv/compile V=s
 
 ## 安装
 
+### 一键管理脚本（GitHub Release，x86_64）
+
+已发布到 GitHub Releases，适用于 OpenWrt 24.10 x86_64 路由器（含 iStoreOS）。推荐使用一键管理脚本，自动检测平台/架构、检查安装状态，支持安装、更新、强制重装、卸载：
+
+```bash
+curl -kL -o /tmp/cqiptv-install.sh https://github.com/gy520187/cqiptv/releases/download/v1.0.0/install.sh
+sh /tmp/cqiptv-install.sh install
+```
+
+```bash
+sh /tmp/cqiptv-install.sh install      # 安装
+sh /tmp/cqiptv-install.sh update       # 更新到最新版
+sh /tmp/cqiptv-install.sh reinstall    # 强制重装
+sh /tmp/cqiptv-install.sh uninstall    # 卸载（保留 /etc/cqiptv 数据）
+sh /tmp/cqiptv-install.sh status      # 查看状态
+```
+
+备选：手动下载安装（推荐用 `curl`，能可靠跟随 GitHub 下载重定向）：
+
+```bash
+opkg update && \
+curl -kL -o /tmp/cqiptv.ipk https://github.com/gy520187/cqiptv/releases/download/v1.0.0/cqiptv_1.0.0-1_x86_64.ipk && \
+curl -kL -o /tmp/luci-app-cqiptv.ipk https://github.com/gy520187/cqiptv/releases/download/v1.0.0/luci-app-cqiptv_1.0.0-1_x86_64.ipk && \
+opkg install /tmp/cqiptv.ipk /tmp/luci-app-cqiptv.ipk && \
+rm -f /tmp/cqiptv.ipk /tmp/luci-app-cqiptv.ipk && \
+/etc/init.d/cqiptv enable && \
+/etc/init.d/cqiptv start
+```
+
+无 `curl` 时先 `opkg install curl`，或用 `wget --no-check-certificate -q -O /tmp/xxx.ipk <同款 URL>` 下载后安装；若报 `Malformed package file`，改用上面的 `curl` 版本。
+
+### 本地 .ipk 安装
+
 ```bash
 opkg install cqiptv_*.ipk luci-app-cqiptv_*.ipk
 ```

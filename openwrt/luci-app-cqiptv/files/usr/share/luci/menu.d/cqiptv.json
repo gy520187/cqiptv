@@ -8,5 +8,15 @@
 		"depends": {
 			"acl": [ "luci-app-cqiptv" ]
 		}
+	},
+	"admin/services/cqiptv/config": {
+		"title": "配置",
+		"action": {
+			"type": "view",
+			"path": "cqiptv/config"
+		},
+		"depends": {
+			"acl": [ "luci-app-cqiptv" ]
+		}
 	}
 }

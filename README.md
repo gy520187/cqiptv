@@ -87,6 +87,55 @@ python main.py --refresh-epg   # 强制全量刷新 EPG（忽略本地缓存）
 python scheduler.py    # 定时采集
 ```
 
+### OpenWrt 24.10 一键安装/管理脚本（x86_64）
+
+适用于 OpenWrt 24.10 x86_64 路由器（软路由，含 iStoreOS）。软件包已发布到 GitHub Releases，推荐使用一键管理脚本（自动检测平台/架构、检查是否已安装，支持安装、更新、强制重装、卸载）：
+
+```bash
+curl -kL -o /tmp/cqiptv-install.sh https://github.com/gy520187/cqiptv/releases/download/v1.0.0/install.sh
+sh /tmp/cqiptv-install.sh install
+```
+
+后续新装与更新均使用该脚本：
+
+```bash
+sh /tmp/cqiptv-install.sh install      # 安装
+sh /tmp/cqiptv-install.sh update       # 更新到最新版
+sh /tmp/cqiptv-install.sh reinstall    # 强制重装（文件损坏/权限异常时）
+sh /tmp/cqiptv-install.sh uninstall    # 卸载（保留 /etc/cqiptv 数据）
+sh /tmp/cqiptv-install.sh status      # 查看环境/安装/服务状态
+```
+
+备选：手动下载安装（推荐使用 `curl`，能可靠跟随 GitHub 下载重定向）：
+
+```bash
+opkg update && \
+curl -kL -o /tmp/cqiptv.ipk https://github.com/gy520187/cqiptv/releases/download/v1.0.0/cqiptv_1.0.0-1_x86_64.ipk && \
+curl -kL -o /tmp/luci-app-cqiptv.ipk https://github.com/gy520187/cqiptv/releases/download/v1.0.0/luci-app-cqiptv_1.0.0-1_x86_64.ipk && \
+opkg install /tmp/cqiptv.ipk /tmp/luci-app-cqiptv.ipk && \
+rm -f /tmp/cqiptv.ipk /tmp/luci-app-cqiptv.ipk && \
+/etc/init.d/cqiptv enable && \
+/etc/init.d/cqiptv start
+```
+
+路由器没有 `curl` 时，先 `opkg install curl`，或使用 `wget` 备选命令：
+
+```bash
+opkg update && \
+wget --no-check-certificate -q -O /tmp/cqiptv.ipk https://github.com/gy520187/cqiptv/releases/download/v1.0.0/cqiptv_1.0.0-1_x86_64.ipk && \
+wget --no-check-certificate -q -O /tmp/luci-app-cqiptv.ipk https://github.com/gy520187/cqiptv/releases/download/v1.0.0/luci-app-cqiptv_1.0.0-1_x86_64.ipk && \
+opkg install /tmp/cqiptv.ipk /tmp/luci-app-cqiptv.ipk && \
+rm -f /tmp/cqiptv.ipk /tmp/luci-app-cqiptv.ipk && \
+/etc/init.d/cqiptv enable && \
+/etc/init.d/cqiptv start
+```
+
+若 `wget` 下载后 opkg 报 `Malformed package file`，请改用上面的 `curl` 版本。
+
+- 包含主程序 `cqiptv` 与 LuCI 界面 `luci-app-cqiptv`，依赖（`python3-flask` 等）由 opkg 自动从官方源安装。
+- 安装后 LuCI「服务 -> IPTV 采集」打开管理页，首次在 Web 界面填写抓包认证参数。
+- 详细说明见 `openwrt/README.md`。
+
 首次运行会自动生成 `config.yaml`（从 `config.example.yaml` 复制，若不存在模板则创建默认配置），然后在 Web 配置页填入抓包参数即可。`.env` 仅在 Docker Compose 部署时使用，本地运行不需要。
 
 ## Web 界面使用
