@@ -1,12 +1,18 @@
 {
 	"admin/services/cqiptv": {
 		"title": "IPTV 采集",
+		"order": 1,
+		"action": {
+			"type": "view",
+			"path": "cqiptv/overview"
+		},
 		"depends": {
 			"acl": [ "luci-app-cqiptv" ]
 		}
 	},
 	"admin/services/cqiptv/overview": {
 		"title": "总览",
+		"order": 1,
 		"action": {
 			"type": "view",
 			"path": "cqiptv/overview"
@@ -17,6 +23,7 @@
 	},
 	"admin/services/cqiptv/config": {
 		"title": "配置",
+		"order": 2,
 		"action": {
 			"type": "view",
 			"path": "cqiptv/config"
