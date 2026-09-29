@@ -160,7 +160,7 @@ do_status() {
 show_help() {
     cat <<EOF
 cqiptv OpenWrt 一键管理脚本
-用法: sh $0 [命令]
+用法: sh install.sh [命令]
 
 命令列表:
   install      安装（默认）

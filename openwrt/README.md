@@ -52,16 +52,15 @@ make package/luci-app-cqiptv/compile V=s
 已发布到 GitHub Releases，适用于 OpenWrt 24.10 x86_64 路由器（含 iStoreOS）。推荐使用一键管理脚本，自动检测平台/架构、检查安装状态，支持安装、更新、强制重装、卸载：
 
 ```bash
-curl -kL -o /tmp/cqiptv-install.sh https://github.com/gy520187/cqiptv/releases/download/v1.0.0/install.sh
-sh /tmp/cqiptv-install.sh install
+uclient-fetch -q -O - https://raw.githubusercontent.com/gy520187/cqiptv/main/openwrt/install.sh | sh
 ```
 
 ```bash
-sh /tmp/cqiptv-install.sh install      # 安装
-sh /tmp/cqiptv-install.sh update       # 更新到最新版
-sh /tmp/cqiptv-install.sh reinstall    # 强制重装
-sh /tmp/cqiptv-install.sh uninstall    # 卸载（保留 /etc/cqiptv 数据）
-sh /tmp/cqiptv-install.sh status      # 查看状态
+uclient-fetch -q -O - https://raw.githubusercontent.com/gy520187/cqiptv/main/openwrt/install.sh | sh                 # 安装
+uclient-fetch -q -O - https://raw.githubusercontent.com/gy520187/cqiptv/main/openwrt/install.sh | sh -s update      # 更新到最新版
+uclient-fetch -q -O - https://raw.githubusercontent.com/gy520187/cqiptv/main/openwrt/install.sh | sh -s reinstall   # 强制重装
+uclient-fetch -q -O - https://raw.githubusercontent.com/gy520187/cqiptv/main/openwrt/install.sh | sh -s uninstall   # 卸载（保留 /etc/cqiptv 数据）
+uclient-fetch -q -O - https://raw.githubusercontent.com/gy520187/cqiptv/main/openwrt/install.sh | sh -s status      # 查看状态
 ```
 
 备选：手动下载安装（推荐用 `curl`，能可靠跟随 GitHub 下载重定向）：
