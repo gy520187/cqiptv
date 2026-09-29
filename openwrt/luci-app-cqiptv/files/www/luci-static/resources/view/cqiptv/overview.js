@@ -78,7 +78,6 @@ return view.extend({
             '    </div>',
             '    <div class="cq-actions">',
             '      <a id="cq-btn-web" class="btn cbi-button-action cq-btn" target="_blank" rel="noopener">访问 Web 界面</a>',
-            '      <a id="cq-btn-config" class="btn cbi-button-action cq-btn" target="_self">配置</a>',
             '      <button id="cq-btn-collect" class="btn cbi-button-action cq-btn cq-btn-primary">立即采集</button>',
             '      <button id="cq-btn-refresh" class="btn cbi-button-action cq-btn">强制刷新 EPG</button>',
             '    </div>',
@@ -108,7 +107,6 @@ return view.extend({
     bindActions: function() {
         var self = this;
         this.rootEl.querySelector('#cq-btn-web').href = apiBase() + '/';
-        this.rootEl.querySelector('#cq-btn-config').href = L.url('admin/services/cqiptv/config');
         this.rootEl.querySelector('#cq-btn-collect').addEventListener('click', function() {
             self.startCollect(false);
         });
