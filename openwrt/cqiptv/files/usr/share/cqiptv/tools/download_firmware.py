@@ -124,15 +124,15 @@ def main():
         sys.exit(1)
 
     # ---- 步骤 1：公网升级入口，302 指向内网升级服务器 ----
-url1 = (f"{PUBLIC_UPGRADE}?TYPE={args.type}"
-                f"&STBID={args.stbid}"
-                f"&MAC={args.mac}"
-                f"&USER={args.user}"
-                f"&VER={args.ver}"
-                f"&SoftwareVersion={args.ver}"
-                f"&SoftwareHWVersion={args.ver}"
-                f"&HardwareVersion={args.type}"
-                f"&CHECKSUM={args.checksum}")
+    url1 = (f"{PUBLIC_UPGRADE}?TYPE={args.type}"
+            f"&STBID={args.stbid}"
+            f"&MAC={args.mac}"
+            f"&USER={args.user}"
+            f"&VER={args.ver}"
+            f"&SoftwareVersion={args.ver}"
+            f"&SoftwareHWVersion={args.ver}"
+            f"&HardwareVersion={args.type}"
+            f"&CHECKSUM={args.checksum}")
     print(f"[1/4] 请求公网升级入口: {PUBLIC_UPGRADE}?...")
     try:
         final_url, _, _ = http_get(url1)
