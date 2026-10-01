@@ -114,9 +114,10 @@ config cqiptv 'web'
 	option epg_workers '2'                  # EPG 并行线程数
 
 config cqiptv 'scheduler'
-	option enabled '0'                      # 1 启用定时采集
-	option cron '0 4 * * *'                 # cron 表达式
+	option cron '0 4 * * *'                 # 默认 cron（兜底），实际以 Web「定时任务」页配置为准
 ```
+
+> 定时采集统一在 Web 界面配置：浏览器打开 `http://<路由器IP>:6061` →「定时任务」页设置 cron 与开关，保存后立即生效，无需修改 UCI。定时任务进程随服务常驻，未启用任务时仅空转等待。
 
 修改后重启：`/etc/init.d/cqiptv restart`。
 
