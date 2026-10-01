@@ -22,7 +22,6 @@ REPO_NAME="cqiptv"
 RELEASE_VERSION="v1.0.0"
 PKG_MAIN="cqiptv_1.0.0-1_x86_64.ipk"
 PKG_LUCI="luci-app-cqiptv_1.0.0-1_x86_64.ipk"
-ARCH="x86_64"
 
 BASE_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${RELEASE_VERSION}"
 TMPDIR="/tmp/cqiptv-install-$$"
@@ -47,11 +46,15 @@ check_env() {
         err "未检测到 opkg，本脚本仅适用于 OpenWrt / iStoreOS。"
         exit 1
     fi
-    # 架构检测
-    if ! opkg print-architecture 2>/dev/null | grep -q "$ARCH"; then
-        err "当前架构不受支持（需要 $ARCH，当前: $(uname -m)）。"
-        exit 1
-    fi
+    # 架构检测（直接按 uname -m 判断，兼容 x86_64 / amd64）
+    case "$(uname -m)" in
+        x86_64|amd64)
+            ;;
+        *)
+            err "当前架构不受支持（需要 x86_64，当前: $(uname -m)）。"
+            exit 1
+            ;;
+    esac
     # curl 检测，缺失则自动安装
     if ! command -v curl >/dev/null 2>&1; then
         info "未检测到 curl，正在安装..."
