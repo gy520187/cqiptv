@@ -19,6 +19,7 @@ import argparse
 import os
 import re
 import sys
+import gzip
 import urllib.parse
 import urllib.request
 from urllib.error import HTTPError, URLError
@@ -84,9 +85,12 @@ def http_get(url, data=None, timeout=15):
     req.add_header("User-Agent", USER_AGENT)
     req.add_header("Content-Type", "text/plain; charset=utf-8")
     req.add_header("Connection", "Keep-Alive")
-    req.add_header("Accept", "*/*")
+    req.add_header("Accept-Encoding", "gzip")
     with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return resp.geturl(), resp.headers, resp.read()
+        body = resp.read()
+        if resp.headers.get("Content-Encoding", "").lower() == "gzip":
+            body = gzip.decompress(body)
+        return resp.geturl(), resp.headers, body
 
 
 def main():
