@@ -16,6 +16,7 @@
 """
 
 import argparse
+import socket
 import os
 import re
 import sys
@@ -81,16 +82,65 @@ def parse_config_txt(text):
 
 
 def http_get(url, data=None, timeout=15):
-    req = urllib.request.Request(url, data=data)
-    req.add_header("User-Agent", USER_AGENT)
-    req.add_header("Content-Type", "text/plain; charset=utf-8")
-    req.add_header("Connection", "Keep-Alive")
-    req.add_header("Accept-Encoding", "gzip")
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        body = resp.read()
-        if resp.headers.get("Content-Encoding", "").lower() == "gzip":
-            body = gzip.decompress(body)
-        return resp.geturl(), resp.headers, body
+    u = urllib.parse.urlparse(url)
+    host = u.hostname
+    port = u.port or 80
+    path = u.path or "/"
+    if u.query:
+        path += "?" + u.query
+    if data is None:
+        method, body = "GET", b""
+    else:
+        method, body = "POST", data.encode() if isinstance(data, str) else data
+    head = (
+        f"{method} {path} HTTP/1.1\r\n"
+        "Content-Type: text/plain; charset=utf-8\r\n"
+        f"User-Agent: {USER_AGENT}\r\n"
+        f"Host: {host}:{port}\r\n"
+        "Connection: Keep-Alive\r\n"
+        "Accept-Encoding: gzip\r\n"
+    )
+    if data is not None:
+        head += f"Content-Length: {len(body)}\r\n"
+    head += "\r\n"
+    with socket.create_connection((host, port), timeout=timeout) as s:
+        s.settimeout(timeout)
+        s.sendall(head.encode("latin-1") + body)
+        raw = b""
+        while b"\r\n\r\n" not in raw:
+            chunk = s.recv(65536)
+            if not chunk:
+                break
+            raw += chunk
+        head_bytes, _, rest = raw.partition(b"\r\n\r\n")
+        lines = head_bytes.split(b"\r\n")
+        code = int(lines[0].split(b" ", 2)[1])
+        msg = lines[0].split(b" ", 2)[2].decode("latin-1", "replace")
+        headers = {}
+        for line in lines[1:]:
+            if b":" in line:
+                k, _, v = line.partition(b":")
+                headers[k.strip().decode("latin-1")] = v.strip().decode("latin-1")
+        content_length = int(headers.get("Content-Length", 0))
+        while len(rest) < content_length:
+            chunk = s.recv(65536)
+            if not chunk:
+                break
+            rest += chunk
+        body = rest[:content_length] if content_length else rest
+        if headers.get("Content-Encoding", "").lower() == "gzip":
+            try:
+                body = gzip.decompress(body)
+            except OSError:
+                pass
+        if code in (301, 302, 303, 307, 308):
+            loc = headers.get("Location")
+            if loc:
+                return urllib.parse.urljoin(url, loc), headers, body
+            return url, headers, body
+        if code >= 400:
+            raise HTTPError(url, code, msg, headers, None)
+        return url, headers, body
 
 
 def main():
