@@ -1,12 +1,17 @@
 # scheduler.py
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from apscheduler.triggers.cron import CronTrigger
 from iptv.config import load_config
 from iptv.logger import setup_logger
 from iptv import constants
 from main import collect
+
+# 固定使用北京时间（UTC+8），不依赖系统 /etc/localtime 或 tzlocal：
+# OpenWrt 上 tzlocal 可能因缺少时区数据而失败，且 Python 未调用 tzset 时
+# TZ 环境变量不会生效，导致 CronTrigger 时区探测异常、cron 被误判无效。
+CST = timezone(timedelta(hours=8), name="Asia/Shanghai")
 
 cfg = load_config("config.yaml")
 logger = setup_logger(cfg)
@@ -34,12 +39,14 @@ def _load_jobs():
 
 def _next_run(cron, now=None):
     try:
-        trigger = CronTrigger.from_crontab(cron)
-        start = now if now is not None else datetime.now()
-        # APScheduler 期望 aware datetime；统一转本地时区，返回时再转为 naive 本地时间
-        start_aware = start.astimezone() if start.tzinfo is None else start
+        trigger = CronTrigger.from_crontab(cron, timezone=CST)
+        start = now if now is not None else datetime.now(CST)
+        if start.tzinfo is None:
+            start_aware = start.replace(tzinfo=CST)
+        else:
+            start_aware = start.astimezone(CST)
         nr = trigger.get_next_fire_time(None, start_aware)
-        return nr.replace(tzinfo=None) if nr else None
+        return nr.astimezone(CST) if nr else None
     except Exception:
         return None
 
@@ -83,7 +90,7 @@ def _log_schedule_status(jobs, nr=None):
     if nr is None:
         nr = _next_run_multi(jobs)
     if nr:
-        delta = (nr - datetime.now()).total_seconds()
+        delta = (nr - datetime.now(CST)).total_seconds()
         logger.info(f"最近触发: {nr.strftime('%Y-%m-%d %H:%M:%S')}（{delta:.0f} 秒后）")
 
 
@@ -119,7 +126,7 @@ def main_loop():
                 logger.error(f"定时任务 cron 均无效: {jobs}")
                 time.sleep(60)
                 continue
-            delta = (nr - datetime.now()).total_seconds()
+            delta = (nr - datetime.now(CST)).total_seconds()
             if delta > 60:
                 time.sleep(5)
                 continue
@@ -128,7 +135,7 @@ def main_loop():
             jobs = _load_jobs()
             if not jobs:
                 continue
-            if nr <= datetime.now():
+            if nr <= datetime.now(CST):
                 job()
                 _log_schedule_status(jobs)
             time.sleep(2)

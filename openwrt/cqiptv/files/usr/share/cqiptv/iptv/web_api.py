@@ -2,8 +2,13 @@
 import os
 import json
 import threading
+from datetime import timedelta, timezone
 from . import constants
 from .utils import categorize_channel, mask_secret
+
+# 固定使用北京时间（UTC+8）：OpenWrt 上 tzlocal 可能因缺少时区数据失败，
+# 且 Python 未调用 tzset 时 TZ 环境变量不生效，导致 CronTrigger 时区探测异常。
+CST = timezone(timedelta(hours=8), name="Asia/Shanghai")
 
 # 总览页仅展示这三个数据文件
 STATUS_FILES = {"playlist.m3u", "epg.xml", "epg.xml.gz"}
@@ -260,7 +265,7 @@ class WebAPI:
                 if not cron:
                     continue
                 try:
-                    CronTrigger.from_crontab(cron)
+                    CronTrigger.from_crontab(cron, timezone=CST)
                 except Exception as e:
                     return False, f"cron 表达式无效: {cron}（{e}）"
                 clean.append({"enabled": bool(j.get("enabled")), "cron": cron})
@@ -292,10 +297,10 @@ class WebAPI:
         try:
             from datetime import datetime
             from apscheduler.triggers.cron import CronTrigger
-            trigger = CronTrigger.from_crontab(cron)
-            start = datetime.now().astimezone()
+            trigger = CronTrigger.from_crontab(cron, timezone=CST)
+            start = datetime.now(CST)
             nr = trigger.get_next_fire_time(None, start)
-            return nr.replace(tzinfo=None) if nr else None
+            return nr.astimezone(CST) if nr else None
         except Exception:
             return None
 
