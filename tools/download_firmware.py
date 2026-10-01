@@ -142,7 +142,8 @@ def main():
     ap.add_argument("--ver", help="软件版本（如 19.2.0-LCQD15.B011）")
     ap.add_argument("--section", default="FIRMWARE-FULL", help="固件段，默认 FIRMWARE-FULL（全量）")
     ap.add_argument("--outdir", default=".", help="固件保存目录")
-    ap.add_argument("--checksum", default="0", help="CHECKSUM 参数（抓包中服务端不严格校验，默认 0）")
+    ap.add_argument("--checksum", default="21270", help="公网入口 CHECKSUM（抓包值，默认 21270）")
+    ap.add_argument("--checksum-in", default="21608", help="内网升级服务器 CHECKSUM（抓包值，默认 21608）")
     args = ap.parse_args()
 
     cfg = {}
@@ -186,10 +187,11 @@ def main():
         print(f"公网入口不可达（请确认在重庆电信网络内）: {e}")
         sys.exit(1)
 
-    # urllib 自动跟随 302，final_url 即内网 config.txt 地址
-    print(f"[2/4] 跟随跳转到: {final_url}")
+    # 内网升级服务器校验独立的 CHECKSUM（抓包中 21608，与公网 21270 不同）
+    final_url_in = re.sub(r"CHECKSUM=[^&]*", f"CHECKSUM={args.checksum_in}", final_url)
+    print(f"[2/4] 跟随跳转到: {final_url_in}")
     try:
-        _, headers, body = http_get(final_url)
+        _, headers, body = http_get(final_url_in)
     except HTTPError as e:
         print(f"内网升级清单请求失败: HTTP {e.code} {e.reason}")
         sys.exit(1)
