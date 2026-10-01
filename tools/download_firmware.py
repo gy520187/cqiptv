@@ -34,7 +34,7 @@ DOWNLOAD_PATHS = [
     "/firmware/{f}",
 ]
 
-USER_AGENT = "Mozilla/5.0 (X11; U; Linux i686; en-US) AppleWebKit/534.0 (KHTML, like Gecko)"
+USER_AGENT = "Dalvik/1.6.0 (Linux; U; Android 4.4.2; EC6108V9U_pub_cqydx Build/KOT49H)"
 
 
 def mask_secret(s):
@@ -82,6 +82,8 @@ def parse_config_txt(text):
 def http_get(url, data=None, timeout=15):
     req = urllib.request.Request(url, data=data)
     req.add_header("User-Agent", USER_AGENT)
+    req.add_header("Content-Type", "text/plain; charset=utf-8")
+    req.add_header("Connection", "Keep-Alive")
     req.add_header("Accept", "*/*")
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return resp.geturl(), resp.headers, resp.read()
@@ -100,7 +102,16 @@ def main():
     ap.add_argument("--checksum", default="0", help="CHECKSUM 参数（抓包中服务端不严格校验，默认 0）")
     args = ap.parse_args()
 
-    cfg = load_config(args.config)
+    cfg = {}
+    if os.path.exists(args.config):
+        cfg = load_config(args.config)
+    elif args.config == "config.yaml":
+        alt = "/etc/cqiptv/config.yaml"
+        if os.path.exists(alt):
+            print(f"当前目录无 config.yaml，使用 {alt}")
+            cfg = load_config(alt)
+    else:
+        print(f"配置 {args.config} 不存在，仅使用命令行参数")
     user_id = args.user or cfg.get("UserID") or os.environ.get("USER")
     mac = args.mac or cfg.get("mac") or os.environ.get("MAC")
     stb_id = args.stbid or cfg.get("STBID") or os.environ.get("STBID")
