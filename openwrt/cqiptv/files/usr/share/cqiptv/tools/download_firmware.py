@@ -90,6 +90,8 @@ def http_get(url, data=None, timeout=15):
 
 
 def main():
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    urllib.request.install_opener(opener)
     ap = argparse.ArgumentParser(description="下载重庆电信 IPTV 盒子固件")
     ap.add_argument("--config", default="config.yaml", help="cqiptv config.yaml 路径")
     ap.add_argument("--user", help="UserID（如 i5207379189@itv）")
