@@ -34,7 +34,7 @@ async function loadCategories() {
 function urlCell(url) {
     if (!url) return '<span class="url-empty">-</span>';
     const esc = url.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    return `<span class="url-cell" title="${esc}" onclick="copyText('${esc.replace(/'/g, "\\'")}')">${esc}</span>';
+    return `<span class="url-cell" title="${esc}" onclick="copyText('${esc.replace(/'/g, "\\'")}')">${esc}</span>`;
 }
 
 function esc(s) {
