@@ -147,3 +147,6 @@ config cqiptv 'scheduler'
 `cqiptv/files/usr/share/cqiptv/` 下（`main.py`、`scheduler.py`、`server.py`、
 `iptv/`、`web/`、`tools/`、`config.example.yaml`，`vendor/` 一般无需变动）。
 修改后重新 `ipkg-build` 编译，并将生成的 `.ipk` 上传到 GitHub Releases 即可。
+
+> **v1.0.0 起移除固件提取工具**（`download_firmware.py`）。旧版升级/强制重装时，
+> 一键脚本会自动清理 `/usr/share/cqiptv/tools/download_firmware.py` 等遗留文件。
