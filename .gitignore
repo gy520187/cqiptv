@@ -8,4 +8,4 @@ log/
 output/
 data/epg_cache/
 data/scheduler_reload.flag
-openwrt/bin/
+bin/
