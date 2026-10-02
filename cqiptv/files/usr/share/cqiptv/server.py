@@ -7,19 +7,20 @@ from iptv.logger import setup_logger
 from iptv import constants
 from iptv.web_api import WebAPI
 
-cfg = load_config("config.yaml")
+cfg = load_config()
 logger = setup_logger(cfg)
 
 app = Flask(__name__, template_folder="web/templates", static_folder="web/static")
 app.config["JSON_AS_ASCII"] = False
 api = WebAPI(cfg, logger)
+STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web", "static")
 
 
 @app.context_processor
 def inject_static_version():
     """style.css 内容变化后自动更新查询版本号，避免浏览器缓存旧样式"""
     try:
-        v = int(os.path.getmtime(os.path.join("web", "static", "style.css")))
+        v = int(os.path.getmtime(os.path.join(STATIC_DIR, "style.css")))
     except OSError:
         v = 1
     return {"static_version": v}

@@ -13,7 +13,7 @@ from main import collect
 # TZ 环境变量不会生效，导致 CronTrigger 时区探测异常、cron 被误判无效。
 CST = timezone(timedelta(hours=8), name="Asia/Shanghai")
 
-cfg = load_config("config.yaml")
+cfg = load_config()
 logger = setup_logger(cfg)
 
 

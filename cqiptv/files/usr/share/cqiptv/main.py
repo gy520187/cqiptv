@@ -53,7 +53,7 @@ def collect(allow_crack=True, force_refresh=False):
     logger = None
     lock = None
     try:
-        cfg = load_config("config.yaml")
+        cfg = load_config()
         logger = setup_logger(cfg)
         logger.info("=" * 60)
         logger.info("IPTV 采集开始")

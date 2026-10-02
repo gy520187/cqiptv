@@ -11,8 +11,10 @@ class Config:
     "ip", "SessionID",
 ]
 
-    def __init__(self, path="config.yaml"):
-        self.path = path
+    def __init__(self, path=None):
+        # 默认基于 CQIPTV_BASE_DIR（OpenWrt 版由 init.d 设为 /etc/cqiptv），
+        # 避免 procd cwd 不生效时配置落在 /app 下；本地/Docker 不设置时保持相对路径
+        self.path = path or os.path.join(os.getenv("CQIPTV_BASE_DIR") or "", "config.yaml")
         self.yaml = YAML()
         self.yaml.preserve_quotes = True
         self.yaml.indent(mapping=2, sequence=4, offset=2)
@@ -21,7 +23,7 @@ class Config:
 
     def load(self):
         if not os.path.exists(self.path):
-            template = "config.example.yaml"
+            template = os.path.join(os.getenv("CQIPTV_BASE_DIR") or "", "config.example.yaml")
             if os.path.exists(template):
                 shutil.copy(template, self.path)
             else:
@@ -115,5 +117,5 @@ class Config:
         return not all(checks)
 
 
-def load_config(path="config.yaml") -> Config:
+def load_config(path=None) -> Config:
     return Config(path)

@@ -14,6 +14,10 @@ DEFAULT_EPG_BASE = "http://192.0.2.10:33200/EPG/jsp"
 AUTH_PUBLIC = "http://epg.itv.cq.cn:8080/EDS/jsp/AuthenticationURL"
 
 # ========== 路径 ==========
+# OpenWrt 版由 init.d 通过环境变量指定绝对基础目录（/etc/cqiptv），
+# 所有数据路径基于它拼接，不依赖进程 cwd（部分固件 procd 的 cwd 参数不生效，
+# 否则相对路径会落到 /app 下）。Docker/本地版不设置时保持相对路径行为不变。
+BASE_DIR = os.getenv("CQIPTV_BASE_DIR") or ""
 PATH_CHANNEL_LIST = "/diyiyingshi/en/utilsData/channelList.jsp"
 PATH_EPG = "/diyiyingshi/en/utilsData/tVodProgramList.jsp"
 PATH_MEDIACODE = "/diyiyingshi/en/utilsData/channelMediacode.js"
@@ -33,7 +37,7 @@ MAX_CHANNELS = 0
 # EPG 并发采集线程数（环境变量可覆盖，0/1 表示串行）
 EPG_WORKERS = int(os.getenv("EPG_WORKERS") or "4")
 # EPG 按天缓存目录：每频道每天一个文件，增量采集时先检查本地缓存，避免重复请求
-EPG_CACHE_DIR = "data/epg_cache"
+EPG_CACHE_DIR = os.path.join(BASE_DIR, "data/epg_cache")
 
 # ========== 模板/用户组（与原始抓包对齐） ==========
 TEMPLATE_NAME = "meilixinnongcunhangyebanitvfenzu"
@@ -71,7 +75,7 @@ def _detect_lan_ip():
     return ""
 
 # 注意: icon.py 中实际使用 gh-proxy 加速的 FANMINGMING_BASE，此路径常量仅供部署参考
-ICON_DIR = "data/icon"
+ICON_DIR = os.path.join(BASE_DIR, "data/icon")
 _DEFAULT_WEB_PORT = os.getenv("WEB_PORT") or "6061"
 _lan_ip = _detect_lan_ip()
 ICON_HOST = os.getenv("ICON_HOST") or (f"http://{_lan_ip}:{_DEFAULT_WEB_PORT}" if _lan_ip else "http://your-server:6061")   # M3U 引用的图标地址；自动使用本机 LAN IP，播放器可达
@@ -88,7 +92,7 @@ EXTERNAL_EPG_URL = os.getenv(
 EXTERNAL_EPG_TIMEOUT = 60  # 单个外部 EPG 源下载超时（秒）
 
 # ========== 输出 ==========
-OUTPUT_DIR = "output"
+OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 OUTPUT_FORMAT = "both"
 OUTPUT_PRETTY = True
 R2H_SEEK_OFFSET = 28800
@@ -110,9 +114,9 @@ SCHEDULER_ENABLED = (os.getenv("SCHEDULER_ENABLED", "1").lower()
                      in ("1", "true", "yes", "on"))
 SCHEDULER_CRON = os.getenv("SCHEDULER_CRON", "0 4 * * *")
 # 定时任务配置变更标记：Web 保存定时任务配置后写入，scheduler 检测到后重新加载配置
-SCHEDULER_RELOAD_FLAG = "data/scheduler_reload.flag"
+SCHEDULER_RELOAD_FLAG = os.path.join(BASE_DIR, "data/scheduler_reload.flag")
 
 # ========== 日志 ==========
 LOG_LEVEL = "INFO"
-LOG_DIR = "log"
+LOG_DIR = os.path.join(BASE_DIR, "log")
 LOG_FILE = "iptv.log"

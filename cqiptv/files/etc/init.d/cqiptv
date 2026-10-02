@@ -19,9 +19,40 @@ detect_lan_ip() {
     echo "192.168.1.1"
 }
 
+# 迁移旧版数据：procd 的 cwd 参数在部分固件不生效，旧数据落在 /app 下。
+# 仅移动 cqiptv 明确产生的路径，不影响其他应用；目标目录已存在且有内容则不迁移。
+migrate_legacy() {
+    local legacy="/app"
+    [ -d "$legacy/output" ] || [ -f "$legacy/config.yaml" ] || return 0
+    local target_empty
+    if [ ! -d "$WORK_DIR/output" ] || [ -z "$(ls -A "$WORK_DIR/output" 2>/dev/null)" ]; then
+        mv "$legacy/output" "$WORK_DIR/output" 2>/dev/null || true
+    fi
+    if [ -f "$legacy/config.yaml" ] && [ ! -f "$WORK_DIR/config.yaml" ]; then
+        mv "$legacy/config.yaml" "$WORK_DIR/config.yaml" 2>/dev/null || true
+    fi
+    if [ -f "$legacy/config.example.yaml" ] && [ ! -f "$WORK_DIR/config.example.yaml" ]; then
+        mv "$legacy/config.example.yaml" "$WORK_DIR/config.example.yaml" 2>/dev/null || true
+    fi
+    if [ ! -d "$WORK_DIR/log" ] || [ -z "$(ls -A "$WORK_DIR/log" 2>/dev/null)" ]; then
+        mv "$legacy/log" "$WORK_DIR/log" 2>/dev/null || true
+    fi
+    if [ -d "$legacy/data/epg_cache" ] && { [ ! -d "$WORK_DIR/data/epg_cache" ] || [ -z "$(ls -A "$WORK_DIR/data/epg_cache" 2>/dev/null)" ]; }; then
+        mkdir -p "$WORK_DIR/data"
+        mv "$legacy/data/epg_cache" "$WORK_DIR/data/epg_cache" 2>/dev/null || true
+    fi
+    if [ -d "$legacy/data/icon" ] && { [ ! -d "$WORK_DIR/data/icon" ] || [ -z "$(ls -A "$WORK_DIR/data/icon" 2>/dev/null)" ]; }; then
+        mkdir -p "$WORK_DIR/data"
+        mv "$legacy/data/icon" "$WORK_DIR/data/icon" 2>/dev/null || true
+    fi
+}
+
 start_service() {
     # 准备运行时工作目录
     [ -d "$WORK_DIR" ] || mkdir -p "$WORK_DIR"
+    # 迁移旧版（procd cwd 不生效时数据落在 /app 下）到标准运行时目录。
+    # 仅移动 cqiptv 明确产生的路径，避免影响其他应用；目标已存在或有内容则不迁移。
+    migrate_legacy
     [ -d "$WORK_DIR/data" ] || mkdir -p "$WORK_DIR/data"
     [ -d "$WORK_DIR/data/icon" ] || mkdir -p "$WORK_DIR/data/icon"
     [ -d "$WORK_DIR/output" ] || mkdir -p "$WORK_DIR/output"
@@ -53,7 +84,7 @@ start_service() {
     procd_open_instance
     procd_set_param command "$PYTHON" "$APP_DIR/server.py"
     procd_set_param cwd "$WORK_DIR"
-    procd_set_param env PYTHONPATH="$APP_DIR/vendor" WEB_PORT="$port" WEB_AUTH="$web_auth" ICON_HOST="$icon_host" EPG_URL="$epg_url" EPG_WORKERS="$epg_workers" TZ='Asia/Shanghai'
+    procd_set_param env PYTHONPATH="$APP_DIR/vendor" CQIPTV_BASE_DIR="$WORK_DIR" WEB_PORT="$port" WEB_AUTH="$web_auth" ICON_HOST="$icon_host" EPG_URL="$epg_url" EPG_WORKERS="$epg_workers" TZ='Asia/Shanghai'
     procd_set_param file "$WORK_DIR/config.yaml"
     procd_set_param respawn
     procd_set_param stdout 1
@@ -65,7 +96,7 @@ start_service() {
     procd_open_instance
     procd_set_param command "$PYTHON" "$APP_DIR/scheduler.py"
     procd_set_param cwd "$WORK_DIR"
-    procd_set_param env PYTHONPATH="$APP_DIR/vendor" SCHEDULER_ENABLED=1 SCHEDULER_CRON="$cron" WEB_PORT="$port" WEB_AUTH="$web_auth" ICON_HOST="$icon_host" EPG_URL="$epg_url" EPG_WORKERS="$epg_workers" TZ='Asia/Shanghai'
+    procd_set_param env PYTHONPATH="$APP_DIR/vendor" CQIPTV_BASE_DIR="$WORK_DIR" SCHEDULER_ENABLED=1 SCHEDULER_CRON="$cron" WEB_PORT="$port" WEB_AUTH="$web_auth" ICON_HOST="$icon_host" EPG_URL="$epg_url" EPG_WORKERS="$epg_workers" TZ='Asia/Shanghai'
     procd_set_param file "$WORK_DIR/config.yaml"
     procd_set_param respawn
     procd_set_param stdout 1
