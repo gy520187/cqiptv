@@ -136,6 +136,20 @@ cleanup() {
     rm -rf "$TMPDIR"
 }
 
+# ---------- 清理旧版固件提取工具 ----------
+# v1.0.0 起固件提取工具已从软件包移除，opkg 重装不会删除旧文件，这里手动清理
+cleanup_legacy_firmware_tool() {
+    if [ -f /usr/share/cqiptv/tools/download_firmware.py ]; then
+        info "清理旧版固件提取工具 ..."
+        rm -f /usr/share/cqiptv/tools/download_firmware.py
+        rm -rf /usr/share/cqiptv/tools/__pycache__ 2>/dev/null || true
+        rmdir /usr/share/cqiptv/tools 2>/dev/null || true
+    fi
+    # 用户曾手动下载到 /root/tools 的副本（仅删除已知文件，不触碰其他内容）
+    rm -f /root/tools/download_firmware.py 2>/dev/null || true
+    rmdir /root/tools 2>/dev/null || true
+}
+
 # ---------- 安装 ----------
 do_install() {
     check_env
@@ -151,6 +165,7 @@ do_install() {
     info "安装软件包 ..."
     opkg install "$TMPDIR/$PKG_MAIN" "$TMPDIR/$PKG_LUCI" || { err "安装失败"; cleanup; exit 1; }
     cleanup
+    cleanup_legacy_firmware_tool
     info "启用并启动服务 ..."
     /etc/init.d/cqiptv enable && /etc/init.d/cqiptv start
     info "安装完成。LuCI: 服务 -> IPTV 采集"
@@ -170,6 +185,7 @@ do_update() {
     info "更新软件包 ..."
     opkg install --force-reinstall "$TMPDIR/$PKG_MAIN" "$TMPDIR/$PKG_LUCI" || { err "更新失败"; cleanup; exit 1; }
     cleanup
+    cleanup_legacy_firmware_tool
     info "重启服务 ..."
     /etc/init.d/cqiptv restart 2>/dev/null || /etc/init.d/cqiptv start
     info "更新完成。"
@@ -184,6 +200,7 @@ do_reinstall() {
     info "强制重装软件包 ..."
     opkg install --force-reinstall "$TMPDIR/$PKG_MAIN" "$TMPDIR/$PKG_LUCI" || { err "重装失败"; cleanup; exit 1; }
     cleanup
+    cleanup_legacy_firmware_tool
     /etc/init.d/cqiptv restart 2>/dev/null || /etc/init.d/cqiptv start
     info "强制重装完成。"
 }
