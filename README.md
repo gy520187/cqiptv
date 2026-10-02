@@ -97,7 +97,7 @@ uclient-fetch -q --no-check-certificate -O - https://github.com/gy520187/cqiptv/
 ```
 
 > 若 `github.com` 直连不稳定，在交互模式中可选择 `gh-proxy.com` 或 `ghfast.top` 镜像加速；也可以改用仓库 raw 地址（需能访问 `raw.githubusercontent.com`）：
-> `uclient-fetch -q --no-check-certificate -O - https://raw.githubusercontent.com/gy520187/cqiptv/main/openwrt/install.sh | sh`
+> `uclient-fetch -q --no-check-certificate -O - https://raw.githubusercontent.com/gy520187/cqiptv/openwrt/install.sh | sh`
 > 若命令执行后无任何输出，先去掉 `-q` 重跑一次查看网络错误；若已安装 `ca-certificates`，可去掉 `--no-check-certificate`。缺少 `curl` 时脚本会自动 `opkg install curl`。
 
 非交互模式（`sh -s` 传递命令参数，可用环境变量 `GITHUB_MIRROR=gh-proxy|ghfast` 指定镜像）：
@@ -139,7 +139,7 @@ rm -f /tmp/cqiptv.ipk /tmp/luci-app-cqiptv.ipk && \
 
 - 包含主程序 `cqiptv` 与 LuCI 界面 `luci-app-cqiptv`，依赖（`python3-flask` 等）由 opkg 自动从官方源安装。
 - 安装后 LuCI「服务 -> IPTV 采集」打开管理页，首次在 Web 界面填写抓包认证参数。
-- 详细说明见 `openwrt/README.md`。
+- OpenWrt 版代码已分离到独立 `openwrt` 分支，详细说明见 https://github.com/gy520187/cqiptv/blob/openwrt/README.md
 
 首次运行会自动生成 `config.yaml`（从 `config.example.yaml` 复制，若不存在模板则创建默认配置），然后在 Web 配置页填入抓包参数即可。`.env` 仅在 Docker Compose 部署时使用，本地运行不需要。
 
